@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en-PH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Offline privacy guarantee for the web prototype: no requests to any other origin. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#F4F6F8">
+  <meta name="description" content="MyFinance Pro — offline personal finance and double-entry accounting.">
+  <title>MyFinance Pro</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script src="src/ui/boot-theme.js"></script>
+  <link rel="stylesheet" href="src/styles/tokens.css">
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/components.css">
+  <script type="module" src="src/ui/app.js"></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <div class="boot">Loading MyFinance Pro…</div>
+  </div>
+  <noscript>MyFinance Pro requires JavaScript.</noscript>
+</body>
+</html>

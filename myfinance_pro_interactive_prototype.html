@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="en-PH">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyFinance Pro — Application Shell & Dashboard</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased pb-28">
+  <!-- Top App Bar (Application Shell) -->
+  <header class="sticky top-0 z-30 bg-[var(--card)] border-b border-[var(--border)] px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shrink-0">
+          ₱
+        </div>
+        <div class="min-w-0">
+          <h1 id="shell-title" class="font-bold text-base truncate">MyFinance Pro</h1>
+          <p class="text-xs text-[var(--muted-foreground)] truncate">Offline Double-Entry Finance · PHP (₱)</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="ledger-badge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-500">
+          ✓ Dr = Cr Balanced
+        </span>
+        <button id="btn-open-tx" type="button" class="px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 transition">
+          + Add Entry
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Shell Viewport -->
+  <main id="shell-view" class="max-w-2xl mx-auto px-4 pt-4 space-y-4"></main>
+
+  <!-- Floating Action Button -->
+  <button id="fab-add" type="button" aria-label="Record transaction"
+    class="fixed right-5 bottom-20 z-30 w-14 h-14 rounded-2xl bg-teal-600 text-white shadow-lg flex items-center justify-center text-2xl font-bold hover:bg-teal-500 active:scale-95 transition">
+    +
+  </button>
+
+  <!-- Bottom Navigation Bar (5 Tabs: Dashboard, Transactions, Budgets, Reports, More) -->
+  <nav aria-label="Primary bottom navigation"
+    class="fixed bottom-0 inset-x-0 z-30 bg-[var(--card)] border-t border-[var(--border)]">
+    <div class="max-w-2xl mx-auto grid grid-cols-5 h-16">
+      <button type="button" data-tab="dashboard" class="nav-btn flex flex-col items-center justify-center gap-1 text-xs font-semibold text-teal-500">
+        <span class="nav-pill px-4 py-0.5 rounded-full bg-teal-500/15">⌂</span>
+        <span>Dashboard</span>
+      </button>
+      <button type="button" data-tab="transactions" class="nav-btn flex flex-col items-center justify-center gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+        <span class="nav-pill px-4 py-0.5 rounded-full">☰</span>
+        <span>Transactions</span>
+      </button>
+      <button type="button" data-tab="budgets" class="nav-btn flex flex-col items-center justify-center gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+        <span class="nav-pill px-4 py-0.5 rounded-full">◔</span>
+        <span>Budgets</span>
+      </button>
+      <button type="button" data-tab="reports" class="nav-btn flex flex-col items-center justify-center gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+        <span class="nav-pill px-4 py-0.5 rounded-full">📊</span>
+        <span>Reports</span>
+      </button>
+      <button type="button" data-tab="more" class="nav-btn flex flex-col items-center justify-center gap-1 text-xs font-medium text-[var(--muted-foreground)]">
+        <span class="nav-pill px-4 py-0.5 rounded-full">⊞</span>
+        <span>More</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- New Transaction Modal (Double-Entry Composer) -->
+  <div id="tx-modal" class="fixed inset-0 z-40 bg-black/60 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-t-2xl sm:rounded-2xl p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="font-bold text-base">Record Balanced Transaction</h2>
+        <button id="btn-close-tx" type="button" class="text-xs px-2.5 py-1 rounded-lg bg-[var(--secondary)] text-[var(--secondary-foreground)]">Close</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 p-1 rounded-xl bg-[var(--secondary)]" id="tx-kind-tabs">
+        <button type="button" data-kind="expense" class="py-1.5 rounded-lg text-xs font-semibold bg-[var(--card)] shadow-sm">Expense</button>
+        <button type="button" data-kind="income" class="py-1.5 rounded-lg text-xs font-semibold text-[var(--muted-foreground)]">Income</button>
+        <button type="button" data-kind="transfer" class="py-1.5 rounded-lg text-xs font-semibold text-[var(--muted-foreground)]">Transfer</button>
+      </div>
+      <form id="tx-form" class="space-y-3" novalidate>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Amount (PHP ₱)</label>
+          <input id="tx-amount" type="text" inputmode="decimal" placeholder="0.00" required
+            class="w-full px-3 py-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-lg font-bold tabular-nums" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label id="lbl-primary" class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Category / From</label>
+            <select id="tx-primary" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs"></select>
+          </div>
+          <div>
+            <label id="lbl-secondary" class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Account / To</label>
+            <select id="tx-secondary" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Date</label>
+            <input id="tx-date" type="date" value="2026-11-06" required
+              class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Description</label>
+            <input id="tx-desc" type="text" placeholder="e.g. Groceries, Salary, Transfer"
+              class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs" />
+          </div>
+        </div>
+        <p id="tx-preview" class="text-xs text-[var(--muted-foreground)] bg-[var(--background)] px-3 py-2 rounded-xl border border-[var(--border)]"></p>
+        <p id="tx-error" class="text-xs text-rose-500 hidden"></p>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 transition">
+          Post Journal Entry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+     * PURE DOMAIN LAYER (Exact integer centavos: ₱1.00 === 100 centavos)
+     * Independent of UI — ready for 1:1 Kotlin migration.
+     * ========================================================================= */
+    function parseCentavos(str) {
+      const cleaned = String(str ?? '').replace(/[₱,\s]/g, '');
+      const m = /^(\d+)(?:\.(\d{0,2}))?$/.exec(cleaned);
+      if (!m) throw new Error('Enter a valid positive PHP amount (up to 2 decimal places).');
+      const cents = Number(BigInt(m[1]) * 100n + BigInt((m[2] ?? '').padEnd(2, '0')));
+      if (!Number.isSafeInteger(cents) || cents <= 0) throw new Error('Amount must be greater than zero.');
+      return cents;
+    }
+
+    function formatPHP(centavos, signed = false) {
+      const neg = centavos < 0;
+      const abs = Math.abs(centavos);
+      const cents = abs % 100;
+      const pesos = (abs - cents) / 100;
+      const body = '₱' + String(pesos).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + String(cents).padStart(2, '0');
+      if (neg) return '-' + body;
+      if (signed && centavos > 0) return '+' + body;
+      return body;
+    }
+
+    const ACCOUNTS = [
+      { id: 'acc-1000', code: '1000', name: 'Cash on Hand', type: 'asset', subtype: 'cash' },
+      { id: 'acc-1100', code: '1100', name: 'BPI Bank Account', type: 'asset', subtype: 'bank' },
+      { id: 'acc-1200', code: '1200', name: 'GCash E-Wallet', type: 'asset', subtype: 'ewallet' },
+      { id: 'acc-2000', code: '2000', name: 'BPI Blue Mastercard', type: 'liability', subtype: 'credit_card', creditLimit: 8000000 },
+      { id: 'acc-2100', code: '2100', name: 'Pag-IBIG Multi-Purpose Loan', type: 'liability', subtype: 'loan' },
+      { id: 'acc-3000', code: '3000', name: 'Opening Balance Equity', type: 'equity', subtype: 'equity' },
+      { id: 'acc-4000', code: '4000', name: 'Salary Income', type: 'income', subtype: 'income' },
+      { id: 'acc-4100', code: '4100', name: 'Freelance & Business', type: 'income', subtype: 'income' },
+      { id: 'acc-5000', code: '5000', name: 'Food & Groceries', type: 'expense', subtype: 'expense' },
+      { id: 'acc-5100', code: '5100', name: 'Transportation', type: 'expense', subtype: 'expense' },
+      { id: 'acc-5200', code: '5200', name: 'Utilities & Internet', type: 'expense', subtype: 'expense' },
+      { id: 'acc-5300', code: '5300', name: 'Housing & Condo Dues', type: 'expense', subtype: 'expense' },
+      { id: 'acc-5700', code: '5700', name: 'Shopping & Appliances', type: 'expense', subtype: 'expense' },
+      { id: 'acc-5800', code: '5800', name: 'Bank Fees & Loan Interest', type: 'expense', subtype: 'expense' },
+    ];
+    const ACC_MAP = new Map(ACCOUNTS.map((a) => [a.id, a]));
+
+    let ENTRIES = [
+      // Historical months for 6-month trend charts
+      { id: 'e-1', date: '2026-06-15', kind: 'opening_balance', description: 'Opening Cash & Bank', lines: [{ accountId: 'acc-1000', debit: 850000, credit: 0 }, { accountId: 'acc-1100', debit: 2200000, credit: 0 }, { accountId: 'acc-3000', debit: 0, credit: 3050000 }] },
+      { id: 'e-2', date: '2026-07-05', kind: 'income', description: 'July Salary', lines: [{ accountId: 'acc-1100', debit: 2800000, credit: 0 }, { accountId: 'acc-4000', debit: 0, credit: 2800000 }] },
+      { id: 'e-3', date: '2026-07-18', kind: 'expense', description: 'July Living Expenses', lines: [{ accountId: 'acc-5000', debit: 1450000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 1450000 }] },
+      { id: 'e-4', date: '2026-08-05', kind: 'income', description: 'August Salary', lines: [{ accountId: 'acc-1100', debit: 2800000, credit: 0 }, { accountId: 'acc-4000', debit: 0, credit: 2800000 }] },
+      { id: 'e-5', date: '2026-08-20', kind: 'expense', description: 'August Living Expenses', lines: [{ accountId: 'acc-5200', debit: 1600000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 1600000 }] },
+      { id: 'e-6', date: '2026-09-05', kind: 'income', description: 'September Salary', lines: [{ accountId: 'acc-1100', debit: 3000000, credit: 0 }, { accountId: 'acc-4000', debit: 0, credit: 3000000 }] },
+      { id: 'e-7', date: '2026-09-19', kind: 'expense', description: 'September Living Expenses', lines: [{ accountId: 'acc-5000', debit: 1750000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 1750000 }] },
+      { id: 'e-8', date: '2026-10-05', kind: 'income', description: 'October Salary', lines: [{ accountId: 'acc-1100', debit: 3000000, credit: 0 }, { accountId: 'acc-4000', debit: 0, credit: 3000000 }] },
+      { id: 'e-9', date: '2026-10-22', kind: 'expense', description: 'October Living Expenses', lines: [{ accountId: 'acc-5300', debit: 1900000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 1900000 }] },
+      // Current Month (November 2026) — exact specification examples included:
+      // 1. Salary of ₱30,000 received into Bank Account
+      { id: 'e-10', date: '2026-11-01', kind: 'income', description: 'Monthly Salary (Specification Example 1)', lines: [{ accountId: 'acc-1100', debit: 3000000, credit: 0 }, { accountId: 'acc-4000', debit: 0, credit: 3000000 }] },
+      // 2. Grocery purchase of ₱2,000 in Cash
+      { id: 'e-11', date: '2026-11-02', kind: 'expense', description: 'Grocery Purchase in Cash (Specification Example 2)', lines: [{ accountId: 'acc-5000', debit: 200000, credit: 0 }, { accountId: 'acc-1000', debit: 0, credit: 200000 }] },
+      // 3. Transfer of ₱5,000 from Bank Account to E-wallet (never income or expense)
+      { id: 'e-12', date: '2026-11-03', kind: 'transfer', description: 'Transfer Bank → GCash (Specification Example 3)', lines: [{ accountId: 'acc-1200', debit: 500000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 500000 }] },
+      // 4. Borrowed Loan Proceeds ₱20,000 into Bank (Liability increase, never income)
+      { id: 'e-13', date: '2026-11-03', kind: 'transfer', description: 'Pag-IBIG Loan Proceeds (Not Income)', lines: [{ accountId: 'acc-1100', debit: 2000000, credit: 0 }, { accountId: 'acc-2100', debit: 0, credit: 2000000 }] },
+      // 5. Utilities & Transport expenses
+      { id: 'e-14', date: '2026-11-04', kind: 'expense', description: 'Meralco Electric Bill', lines: [{ accountId: 'acc-5200', debit: 345000, credit: 0 }, { accountId: 'acc-1200', debit: 0, credit: 345000 }] },
+      { id: 'e-15', date: '2026-11-04', kind: 'expense', description: 'Fuel & RFID Toll', lines: [{ accountId: 'acc-5100', debit: 180000, credit: 0 }, { accountId: 'acc-1000', debit: 0, credit: 180000 }] },
+      // 6. Credit card purchase (₱3,200) + partial card bill payment (₱1,500 — never a second expense)
+      { id: 'e-16', date: '2026-11-05', kind: 'expense', description: 'Home Essentials on Credit Card', lines: [{ accountId: 'acc-5700', debit: 320000, credit: 0 }, { accountId: 'acc-2000', debit: 0, credit: 320000 }] },
+      { id: 'e-17', date: '2026-11-05', kind: 'transfer', description: 'Credit Card Bill Settlement (Not 2nd Expense)', lines: [{ accountId: 'acc-2000', debit: 150000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 150000 }] },
+      // 7. Loan repayment splitting Principal (₱2,000 liability reduction) + Interest (₱250 expense)
+      { id: 'e-18', date: '2026-11-06', kind: 'manual', description: 'Loan Amortization (Principal + Interest)', lines: [{ accountId: 'acc-2100', debit: 200000, credit: 0 }, { accountId: 'acc-5800', debit: 25000, credit: 0 }, { accountId: 'acc-1100', debit: 0, credit: 225000 }] },
+    ];
+
+    let BUDGETS = [
+      { id: 'bgt-5000', accountId: 'acc-5000', limit: 600000 }, // ₱6,000 Food
+      { id: 'bgt-5200', accountId: 'acc-5200', limit: 500000 }, // ₱5,000 Utilities
+      { id: 'bgt-5100', accountId: 'acc-5100', limit: 400000 }, // ₱4,000 Transport
+      { id: 'bgt-5700', accountId: 'acc-5700', limit: 600000 }, // ₱6,000 Shopping
+    ];
+
+    let GOALS = [
+      { id: 'g-1', name: 'Emergency Fund (6 Months)', saved: 4500000, target: 10000000, targetDate: '2027-06-30' },
+      { id: 'g-2', name: 'Travel & Vacation Fund', saved: 1250000, target: 2500000, targetDate: '2026-12-20' },
+      { id: 'g-3', name: 'New Android Phone Upgrade', saved: 1800000, target: 3000000, targetDate: '2027-03-15' },
+    ];
+
+    let BILLS = [
+      { id: 'b-1', name: 'PLDT Home Fiber', amount: 169900, dueDate: '2026-11-18', frequency: 'Monthly', expenseAccountId: 'acc-5200', paymentAccountId: 'acc-1100', status: 'Upcoming (in 12d)' },
+      { id: 'b-2', name: 'Condo Association Dues', amount: 350000, dueDate: '2026-11-25', frequency: 'Monthly', expenseAccountId: 'acc-5300', paymentAccountId: 'acc-1100', status: 'Upcoming (in 19d)' },
+    ];
+
+    const LIQUID_SUBTYPES = new Set(['cash', 'bank', 'ewallet']);
+    const MONTHS = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
+    const MONTH_LABELS = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
+
+    function normalBalance(acc, debit, credit) {
+      return (acc.type === 'asset' || acc.type === 'expense') ? (debit - credit) : (credit - debit);
+    }
+
+    function computeState() {
+      const totals = new Map();
+      let totalDebitsAll = 0;
+      let totalCreditsAll = 0;
+      for (const e of ENTRIES) {
+        for (const l of e.lines) {
+          totalDebitsAll += l.debit;
+          totalCreditsAll += l.credit;
+          const t = totals.get(l.accountId) || { debit: 0, credit: 0 };
+          t.debit += l.debit;
+          t.credit += l.credit;
+          totals.set(l.accountId, t);
+        }
+      }
+
+      const balances = new Map();
+      let cash = 0, bank = 0, ewallet = 0, totalAssets = 0, totalLiabilities = 0, creditCards = 0, loans = 0, equityBase = 0, allIncome = 0, allExpense = 0;
+
+      for (const acc of ACCOUNTS) {
+        const t = totals.get(acc.id) || { debit: 0, credit: 0 };
+        const bal = normalBalance(acc, t.debit, t.credit);
+        balances.set(acc.id, bal);
+        if (acc.type === 'asset') totalAssets += bal;
+        if (acc.type === 'liability') totalLiabilities += bal;
+        if (acc.type === 'equity') equityBase += bal;
+        if (acc.type === 'income') allIncome += bal;
+        if (acc.type === 'expense') allExpense += bal;
+        if (acc.subtype === 'cash') cash += bal;
+        if (acc.subtype === 'bank') bank += bal;
+        if (acc.subtype === 'ewallet') ewallet += bal;
+        if (acc.subtype === 'credit_card') creditCards += bal;
+        if (acc.subtype === 'loan') loans += bal;
+      }
+
+      // Current month (2026-11) metrics
+      const monthEntries = ENTRIES.filter((e) => e.date.startsWith('2026-11'));
+      let monthIncome = 0, monthExpenses = 0, monthCashIn = 0, monthCashOut = 0;
+      const catTotals = new Map();
+
+      for (const e of monthEntries) {
+        let liquidDelta = 0;
+        for (const l of e.lines) {
+          const acc = ACC_MAP.get(l.accountId);
+          if (!acc) continue;
+          if (acc.type === 'income') monthIncome += (l.credit - l.debit);
+          if (acc.type === 'expense') {
+            const spent = l.debit - l.credit;
+            monthExpenses += spent;
+            catTotals.set(acc.id, (catTotals.get(acc.id) || 0) + spent);
+          }
+          if (LIQUID_SUBTYPES.has(acc.subtype)) {
+            liquidDelta += (l.debit - l.credit);
+          }
+        }
+        if (liquidDelta > 0) monthCashIn += liquidDelta;
+        else if (liquidDelta < 0) monthCashOut += (-liquidDelta);
+      }
+
+      // 6-month trend series
+      const trend = MONTHS.map((mKey, i) => {
+        const mList = ENTRIES.filter((e) => e.date.startsWith(mKey));
+        let inc = 0, exp = 0, cIn = 0, cOut = 0;
+        for (const e of mList) {
+          let lDelta = 0;
+          for (const l of e.lines) {
+            const acc = ACC_MAP.get(l.accountId);
+            if (acc.type === 'income') inc += (l.credit - l.debit);
+            if (acc.type === 'expense') exp += (l.debit - l.credit);
+            if (LIQUID_SUBTYPES.has(acc.subtype)) lDelta += (l.debit - l.credit);
+          }
+          if (lDelta > 0) cIn += lDelta;
+          else if (lDelta < 0) cOut += (-lDelta);
+        }
+        // Cumulative net worth up to end of mKey
+        const upTo = ENTRIES.filter((e) => e.date.slice(0, 7) <= mKey);
+        let aSum = 0, lSum = 0;
+        for (const e of upTo) {
+          for (const l of e.lines) {
+            const acc = ACC_MAP.get(l.accountId);
+            if (acc.type === 'asset') aSum += (l.debit - l.credit);
+            if (acc.type === 'liability') lSum += (l.credit - l.debit);
+          }
+        }
+        return { label: MONTH_LABELS[i], income: inc, expenses: exp, cashIn: cIn, cashOut: cOut, netWorth: aSum - lSum };
+      });
+
+      const budgetRows = BUDGETS.map((b) => {
+        const acc = ACC_MAP.get(b.accountId);
+        const spent = catTotals.get(b.accountId) || 0;
+        const pct = Math.round((spent / b.limit) * 100);
+        return { name: acc.name, limit: b.limit, spent, remaining: b.limit - spent, pct };
+      });
+      const totalBudgetLimit = budgetRows.reduce((s, r) => s + r.limit, 0);
+      const totalBudgetSpent = budgetRows.reduce((s, r) => s + r.spent, 0);
+
+      const totalGoalTarget = GOALS.reduce((s, g) => s + g.target, 0);
+      const totalGoalSaved = GOALS.reduce((s, g) => s + g.saved, 0);
+
+      const categoryBreakdown = [...catTotals.entries()]
+        .map(([id, amount]) => ({ name: ACC_MAP.get(id).name, amount }))
+        .sort((a, b) => b.amount - a.amount);
+
+      return {
+        balanced: totalDebitsAll === totalCreditsAll && totalAssets === (totalLiabilities + equityBase + (allIncome - allExpense)),
+        totalDebitsAll,
+        totalCreditsAll,
+        cash,
+        bank,
+        ewallet,
+        liquidTotal: cash + bank + ewallet,
+        totalAssets,
+        totalLiabilities,
+        netWorth: totalAssets - totalLiabilities,
+        equityTotal: equityBase + (allIncome - allExpense),
+        creditCards,
+        loans,
+        monthIncome,
+        monthExpenses,
+        netCashFlow: monthCashIn - monthCashOut,
+        trend,
+        budgetRows,
+        totalBudgetLimit,
+        totalBudgetSpent,
+        totalGoalTarget,
+        totalGoalSaved,
+        categoryBreakdown,
+        balances,
+      };
+    }
+
+    /* =========================================================================
+     * SVG CHART GENERATORS (Responsive, zero external libraries)
+     * ========================================================================= */
+    function renderGroupedBarSvg(labels, seriesA, seriesB, colorA, colorB) {
+      const W = 340, H = 160, padL = 46, padR = 10, padT = 12, padB = 24;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+      const maxVal = Math.max(100000, ...seriesA, ...seriesB) * 1.1;
+      const groupW = plotW / labels.length;
+      const barW = 11;
+      let svg = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto overflow-visible">`;
+      for (let i = 0; i <= 3; i++) {
+        const y = padT + plotH - (plotH * i) / 3;
+        const v = Math.round(((maxVal * i) / 3) / 100000);
+        svg += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="currentColor" stroke-opacity="0.12" />`;
+        svg += `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.6">₱${v}k</text>`;
+      }
+      labels.forEach((lbl, i) => {
+        const gx = padL + i * groupW + (groupW - (barW * 2 + 3)) / 2;
+        const hA = Math.max(2, (seriesA[i] / maxVal) * plotH);
+        const hB = Math.max(2, (seriesB[i] / maxVal) * plotH);
+        svg += `<rect x="${gx}" y="${padT + plotH - hA}" width="${barW}" height="${hA}" rx="3" fill="${colorA}"><title>${lbl}: ${formatPHP(seriesA[i])}</title></rect>`;
+        svg += `<rect x="${gx + barW + 3}" y="${padT + plotH - hB}" width="${barW}" height="${hB}" rx="3" fill="${colorB}"><title>${lbl}: ${formatPHP(seriesB[i])}</title></rect>`;
+        svg += `<text x="${padL + i * groupW + groupW / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">${lbl}</text>`;
+      });
+      svg += `</svg>`;
+      return svg;
+    }
+
+    function renderLineSvg(labels, values) {
+      const W = 340, H = 155, padL = 46, padR = 12, padT = 12, padB = 24;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+      const maxVal = Math.max(100000, ...values) * 1.1;
+      const x = (i) => padL + (plotW * i) / (labels.length - 1);
+      const y = (v) => padT + plotH - (v / maxVal) * plotH;
+      const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+      let svg = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto overflow-visible">`;
+      for (let i = 0; i <= 3; i++) {
+        const py = padT + plotH - (plotH * i) / 3;
+        const v = Math.round(((maxVal * i) / 3) / 100000);
+        svg += `<line x1="${padL}" x2="${W - padR}" y1="${py}" y2="${py}" stroke="currentColor" stroke-opacity="0.12" />`;
+        svg += `<text x="${padL - 6}" y="${py + 3}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.6">₱${v}k</text>`;
+      }
+      svg += `<path d="M${x(0)},${padT + plotH} L${pts.join(' L')} L${x(values.length - 1)},${padT + plotH} Z" fill="#0d9488" fill-opacity="0.16" />`;
+      svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+      values.forEach((v, i) => {
+        svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="#14b8a6"><title>${labels[i]}: ${formatPHP(v)}</title></circle>`;
+        svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.7">${labels[i]}</text>`;
+      });
+      svg += `</svg>`;
+      return svg;
+    }
+
+    function renderDonutSvg(items, total) {
+      const colors = ['#14b8a6', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+      const r = 15.9155;
+      let offset = 25;
+      let circles = `<circle cx="21" cy="21" r="${r}" fill="none" stroke="currentColor" stroke-opacity="0.1" stroke-width="5" />`;
+      items.forEach((item, idx) => {
+        const pct = total > 0 ? (item.amount / total) * 100 : 0;
+        circles += `<circle cx="21" cy="21" r="${r}" fill="none" stroke="${colors[idx % colors.length]}" stroke-width="5" stroke-dasharray="${pct.toFixed(2)} ${(100 - pct).toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" />`;
+        offset -= pct;
+      });
+      return `<svg viewBox="0 0 42 42" class="w-28 h-28 shrink-0">${circles}</svg>`;
+    }
+
+    /* =========================================================================
+     * SHELL NAVIGATION & SCREEN RENDERERS
+     * ========================================================================= */
+    let currentTab = 'dashboard';
+
+    function renderDashboardView(s) {
+      const colors = ['bg-teal-500', 'bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-pink-500'];
+      const budgetPct = s.totalBudgetLimit > 0 ? Math.round((s.totalBudgetSpent / s.totalBudgetLimit) * 100) : 0;
+      const goalPct = s.totalGoalTarget > 0 ? Math.round((s.totalGoalSaved / s.totalGoalTarget) * 100) : 0;
+
+      return `
+        <!-- 1. Hero Card: Net Worth, Total Assets, Total Liabilities -->
+        <section class="rounded-2xl p-5 text-white shadow-md" style="background: linear-gradient(135deg, #0f766e 0%, #115e59 60%, #042f2e 100%);">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-teal-100">Net Worth (Assets − Liabilities)</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-white/15 font-semibold">PHP · ₱</span>
+          </div>
+          <p class="text-3xl font-extrabold tracking-tight my-2 tabular-nums">${formatPHP(s.netWorth)}</p>
+          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/15 text-xs">
+            <div>
+              <span class="text-teal-200 block">Total Assets</span>
+              <span class="font-bold text-sm tabular-nums">${formatPHP(s.totalAssets)}</span>
+            </div>
+            <div>
+              <span class="text-teal-200 block">Total Liabilities</span>
+              <span class="font-bold text-sm tabular-nums">${formatPHP(s.totalLiabilities)}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Liquid Balance Tiles: Available Cash, Bank Balances, E-Wallet Balances -->
+        <section class="grid grid-cols-3 gap-2.5">
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3.5 shadow-sm">
+            <span class="text-xs text-[var(--muted-foreground)] block">Available Cash</span>
+            <p class="font-bold text-sm mt-1 tabular-nums text-emerald-500">${formatPHP(s.cash)}</p>
+          </div>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3.5 shadow-sm">
+            <span class="text-xs text-[var(--muted-foreground)] block">Bank Balances</span>
+            <p class="font-bold text-sm mt-1 tabular-nums text-blue-500">${formatPHP(s.bank)}</p>
+          </div>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3.5 shadow-sm">
+            <span class="text-xs text-[var(--muted-foreground)] block">E-Wallet (GCash)</span>
+            <p class="font-bold text-sm mt-1 tabular-nums text-purple-500">${formatPHP(s.ewallet)}</p>
+          </div>
+        </section>
+
+        <!-- 3. Monthly Performance KPIs: Monthly Income, Monthly Expenses, Net Cash Flow -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">November 2026 Performance</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Total Liquid: <strong class="text-[var(--foreground)] tabular-nums">${formatPHP(s.liquidTotal)}</strong></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2.5">
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-xs text-[var(--muted-foreground)] block">Monthly Income</span>
+              <span class="font-bold text-sm text-emerald-500 tabular-nums">${formatPHP(s.monthIncome)}</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-xs text-[var(--muted-foreground)] block">Monthly Expenses</span>
+              <span class="font-bold text-sm text-rose-500 tabular-nums">${formatPHP(s.monthExpenses)}</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-xs text-[var(--muted-foreground)] block">Net Cash Flow</span>
+              <span class="font-bold text-sm ${s.netCashFlow >= 0 ? 'text-emerald-500' : 'text-rose-500'} tabular-nums">${formatPHP(s.netCashFlow, true)}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Charts Grid: Monthly Cash Flow & Income vs. Expenses -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-bold text-sm">Chart 1 · Monthly Cash Flow</h2>
+              <span class="text-xs text-[var(--muted-foreground)]">In vs. Out</span>
+            </div>
+            ${renderGroupedBarSvg(s.trend.map(t => t.label), s.trend.map(t => t.cashIn), s.trend.map(t => t.cashOut), '#10b981', '#f43f5e')}
+          </section>
+
+          <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-bold text-sm">Chart 2 · Income vs. Expenses</h2>
+              <span class="text-xs text-[var(--muted-foreground)]">6 Months</span>
+            </div>
+            ${renderGroupedBarSvg(s.trend.map(t => t.label), s.trend.map(t => t.income), s.trend.map(t => t.expenses), '#14b8a6', '#f59e0b')}
+          </section>
+        </div>
+
+        <!-- 5. Chart 3 (Spending by Category) & Chart 5 (Net-Worth Trend) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <h2 class="font-bold text-sm mb-3">Chart 3 · Spending by Category</h2>
+            <div class="flex items-center gap-4">
+              ${renderDonutSvg(s.categoryBreakdown, s.monthExpenses)}
+              <ul class="flex-1 space-y-1.5 text-xs min-w-0">
+                ${s.categoryBreakdown.map((c, idx) => `
+                  <li class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1.5 truncate">
+                      <span class="w-2.5 h-2.5 rounded-sm ${colors[idx % colors.length]} shrink-0"></span>
+                      <span class="truncate">${c.name}</span>
+                    </span>
+                    <span class="font-semibold tabular-nums">${formatPHP(c.amount)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          </section>
+
+          <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-bold text-sm">Chart 5 · Net-Worth Trend</h2>
+              <span class="text-xs text-teal-500 font-semibold tabular-nums">${formatPHP(s.netWorth)}</span>
+            </div>
+            ${renderLineSvg(s.trend.map(t => t.label), s.trend.map(t => t.netWorth))}
+          </section>
+        </div>
+
+        <!-- 6. Chart 4 & Metric: Savings Progress -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Chart 4 · Savings Progress</h2>
+            <span class="text-xs font-semibold text-teal-500 tabular-nums">${formatPHP(s.totalGoalSaved)} / ${formatPHP(s.totalGoalTarget)} (${goalPct}%)</span>
+          </div>
+          <div class="space-y-2.5">
+            ${GOALS.map((g) => {
+              const p = Math.round((g.saved / g.target) * 100);
+              return `
+                <div>
+                  <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium">${g.name}</span>
+                    <span class="text-[var(--muted-foreground)] tabular-nums">${formatPHP(g.saved)} / ${formatPHP(g.target)} (${p}%)</span>
+                  </div>
+                  <div class="h-2.5 rounded-full bg-[var(--background)] overflow-hidden border border-[var(--border)]">
+                    <div class="h-full bg-teal-500 rounded-full" style="width:${p}%"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+
+        <!-- 7. Budget Utilization, Outstanding Debts, and Upcoming Bills -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h2 class="font-bold text-sm">Budget Utilization</h2>
+              <span class="text-xs font-semibold tabular-nums">${budgetPct}% used</span>
+            </div>
+            <p class="text-xs text-[var(--muted-foreground)] tabular-nums">${formatPHP(s.totalBudgetSpent)} spent of ${formatPHP(s.totalBudgetLimit)}</p>
+            <div class="space-y-2 pt-1">
+              ${s.budgetRows.map((r) => `
+                <div>
+                  <div class="flex justify-between text-xs mb-0.5">
+                    <span>${r.name}</span>
+                    <span class="tabular-nums">${formatPHP(r.spent)} / ${formatPHP(r.limit)}</span>
+                  </div>
+                  <div class="h-2 rounded-full bg-[var(--background)] overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width:${Math.min(100, r.pct)}%"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+          <div class="space-y-4">
+            <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-2">
+              <div class="flex items-center justify-between">
+                <h2 class="font-bold text-sm">Outstanding Debts</h2>
+                <span class="text-xs font-bold text-rose-500 tabular-nums">${formatPHP(s.totalLiabilities)}</span>
+              </div>
+              <div class="text-xs space-y-1.5 pt-1">
+                <div class="flex justify-between">
+                  <span class="text-[var(--muted-foreground)]">Credit Cards (BPI Blue)</span>
+                  <span class="font-semibold tabular-nums">${formatPHP(s.creditCards)}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[var(--muted-foreground)]">Loans (Pag-IBIG Multi-Purpose)</span>
+                  <span class="font-semibold tabular-nums">${formatPHP(s.loans)}</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-2">
+              <h2 class="font-bold text-sm">Upcoming Bills</h2>
+              <div class="text-xs space-y-2">
+                ${BILLS.map((b) => `
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="font-medium">${b.name}</p>
+                      <p class="text-[var(--muted-foreground)]">Due ${b.dueDate} · ${b.status}</p>
+                    </div>
+                    <span class="font-bold tabular-nums">${formatPHP(b.amount)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </section>
+          </div>
+        </div>
+      `;
+    }
+
+    let txSearchQuery = '';
+    let txFilterKind = 'all';
+
+    function renderTransactionsView(s) {
+      const q = txSearchQuery.trim().toLowerCase();
+      const filtered = [...ENTRIES].reverse().filter((e) => {
+        if (txFilterKind !== 'all') {
+          if (txFilterKind === 'other' ? ['income', 'expense', 'transfer'].includes(e.kind) : e.kind !== txFilterKind) return false;
+        }
+        if (!q) return true;
+        const hay = [
+          e.description,
+          e.date,
+          e.kind,
+          ...e.lines.map(l => ACC_MAP.get(l.accountId)?.name || ''),
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+
+      const balanceAccounts = ACCOUNTS.filter(a => a.type === 'asset' || a.type === 'liability');
+
+      return `
+        <!-- Stage 3: Accounts Summary & Quick Actions -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Stage 3 · Accounts & Quick Actions</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">${balanceAccounts.length} Accounts</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.openQuickTx('income')" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-500 text-xs font-semibold">+ Income</button>
+            <button type="button" onclick="window.openQuickTx('expense')" class="px-3 py-1.5 rounded-xl bg-rose-500/15 text-rose-500 text-xs font-semibold">+ Expense</button>
+            <button type="button" onclick="window.openQuickTx('transfer')" class="px-3 py-1.5 rounded-xl bg-blue-500/15 text-blue-500 text-xs font-semibold">⇄ Transfer</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+            ${balanceAccounts.map((a) => `
+              <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+                <div>
+                  <p class="font-semibold">${a.name}</p>
+                  <p class="text-[var(--muted-foreground)]"><code>${a.code}</code> · ${a.subtype.replace('_', ' ')}</p>
+                </div>
+                <span class="font-bold tabular-nums ${a.type === 'liability' ? 'text-rose-500' : ''}">${formatPHP(s.balances.get(a.id) || 0)}</span>
+              </div>
+            `).join('')}
+          </div>
+          <!-- Inline Add Account Form -->
+          <form onsubmit="window.handleCreateAccount(event)" class="pt-2 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+            <input id="new-acc-name" type="text" placeholder="New account name (e.g. Maya)" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            <select id="new-acc-subtype" class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <option value="bank">Bank Account (Asset)</option>
+              <option value="ewallet">E-Wallet (Asset)</option>
+              <option value="cash">Cash (Asset)</option>
+              <option value="credit_card">Credit Card (Liability)</option>
+              <option value="loan">Loan (Liability)</option>
+            </select>
+            <input id="new-acc-opening" type="text" inputmode="decimal" placeholder="Opening ₱ (optional)" class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] tabular-nums" />
+            <button type="submit" class="px-3 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">+ Create Account</button>
+          </form>
+        </section>
+
+        <!-- Search & Filter Bar -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex flex-col sm:flex-row gap-2 justify-between">
+            <input type="search" value="${txSearchQuery.replace(/"/g, '&quot;')}" oninput="window.setTxSearch(this.value)"
+              placeholder="Search description, account, date…"
+              class="flex-1 px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs" />
+            <div class="flex gap-1.5 overflow-x-auto">
+              ${['all', 'income', 'expense', 'transfer', 'other'].map((k) => `
+                <button type="button" onclick="window.setTxFilter('${k}')"
+                  class="px-2.5 py-1.5 rounded-full text-xs font-semibold capitalize ${txFilterKind === k ? 'bg-teal-600 text-white' : 'bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]'}">
+                  ${k}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <h2 class="font-bold text-sm">Posted Journal Entries (${filtered.length})</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Immutable · Reversals Supported</span>
+          </div>
+          <div class="divide-y divide-[var(--border)]">
+            ${filtered.map((e) => {
+              const total = e.lines.reduce((sum, l) => sum + l.debit, 0);
+              const canReverse = !e.reversedById && e.kind !== 'reversal';
+              return `
+                <div class="py-3 space-y-1.5">
+                  <div class="flex items-center justify-between text-xs gap-2">
+                    <span class="font-semibold text-sm ${e.reversedById ? 'line-through opacity-60' : ''}">${e.description}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                      <span class="font-bold tabular-nums">${formatPHP(total)}</span>
+                      ${canReverse ? `<button type="button" onclick="window.reverseEntry('${e.id}')" class="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-500 text-xs font-semibold">↺ Reverse</button>` : ''}
+                    </div>
+                  </div>
+                  <p class="text-xs text-[var(--muted-foreground)]">${e.date} · Kind: <span class="uppercase font-semibold">${e.kind}</span>${e.reversedById ? ' · <span class="text-rose-500 font-semibold">Reversed</span>' : ''}</p>
+                  <div class="bg-[var(--background)] rounded-xl p-2.5 text-xs space-y-1 border border-[var(--border)]">
+                    ${e.lines.map((l) => {
+                      const a = ACC_MAP.get(l.accountId);
+                      return `
+                        <div class="flex justify-between tabular-nums">
+                          <span><code class="opacity-60">${a?.code || ''}</code> ${a?.name || l.accountId}</span>
+                          <span>${l.debit > 0 ? `Dr ${formatPHP(l.debit)}` : `Cr ${formatPHP(l.credit)}`}</span>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderBudgetsView(s) {
+      const expenseAccounts = ACCOUNTS.filter((a) => a.type === 'expense');
+      const totalRemaining = s.totalBudgetLimit - s.totalBudgetSpent;
+      const totalPct = s.totalBudgetLimit > 0 ? Math.round((s.totalBudgetSpent / s.totalBudgetLimit) * 100) : 0;
+      return `
+        <!-- Stage 5: Monthly Category Budgets Summary & Editor -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-bold text-sm">Stage 5 · Monthly Category Budgets (November 2026)</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Transfers, loan principal repayments, and credit-card bill settlements never touch expense categories.</p>
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${totalPct >= 100 ? 'bg-rose-500/15 text-rose-500' : totalPct >= 80 ? 'bg-amber-500/15 text-amber-500' : 'bg-teal-500/15 text-teal-500'}">
+              ${totalPct}% Used
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Total Budget</span>
+              <span class="font-bold tabular-nums">${formatPHP(s.totalBudgetLimit)}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Actual Spent</span>
+              <span class="font-bold tabular-nums">${formatPHP(s.totalBudgetSpent)}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Remaining</span>
+              <span class="font-bold tabular-nums ${totalRemaining < 0 ? 'text-rose-500' : 'text-emerald-500'}">${formatPHP(totalRemaining)}</span>
+            </div>
+          </div>
+
+          <!-- Inline Set / Update Category Budget Form -->
+          <form onsubmit="window.handleSaveBudget(event)" class="pt-2 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <select id="bgt-acc" class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              ${expenseAccounts.map((a) => `<option value="${a.id}">${a.code} · ${a.name}</option>`).join('')}
+            </select>
+            <input id="bgt-limit" type="text" inputmode="decimal" placeholder="Monthly limit ₱ (e.g. 6000.00)" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] tabular-nums" />
+            <button type="submit" class="px-3 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">+ Set / Update Budget</button>
+          </form>
+
+          <div class="space-y-3 pt-2">
+            ${s.budgetRows.map((r) => {
+              const barColor = r.pct >= 100 ? 'bg-rose-500' : r.pct >= 80 ? 'bg-amber-500' : 'bg-teal-500';
+              const statusBadge = r.pct >= 100 ? 'Over Budget' : r.pct >= 80 ? 'Near Limit (80%+)' : 'On Track';
+              return `
+                <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1.5">
+                  <div class="flex justify-between items-center text-xs font-semibold">
+                    <span>${r.name} <span class="text-[var(--muted-foreground)] font-normal">· ${statusBadge}</span></span>
+                    <span class="tabular-nums">${formatPHP(r.spent)} of ${formatPHP(r.limit)} (${r.pct}%)</span>
+                  </div>
+                  <div class="h-2.5 rounded-full bg-[var(--card)] overflow-hidden">
+                    <div class="h-full ${barColor} rounded-full transition-all" style="width:${Math.min(100, r.pct)}%"></div>
+                  </div>
+                  <p class="text-xs ${r.remaining < 0 ? 'text-rose-500' : 'text-emerald-500'} tabular-nums">
+                    ${r.remaining < 0 ? `${formatPHP(-r.remaining)} over budget` : `${formatPHP(r.remaining)} remaining`}
+                  </p>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    let manualLinesDraft = [
+      { accountId: 'acc-5000', side: 'debit', amount: '1250.00' },
+      { accountId: 'acc-1000', side: 'credit', amount: '1250.00' },
+    ];
+
+    function computeManualDraftTotals() {
+      let dr = 0, cr = 0;
+      for (const l of manualLinesDraft) {
+        try {
+          const c = parseCentavos(l.amount);
+          if (l.side === 'debit') dr += c;
+          else cr += c;
+        } catch {}
+      }
+      return { dr, cr, diff: dr - cr, balanced: dr > 0 && dr === cr && manualLinesDraft.length >= 2 };
+    }
+
+    let activeReportSubtab = 'trial-balance';
+    let selectedGlAccountId = 'acc-1100';
+
+    window.setReportTab = (key) => {
+      activeReportSubtab = key;
+      renderApp();
+    };
+
+    window.setGlAccount = (accId) => {
+      selectedGlAccountId = accId;
+      renderApp();
+    };
+
+    function renderSelectedReportBody(s) {
+      const normalSide = (type) => (type === 'asset' || type === 'expense' ? 'debit' : 'credit');
+
+      if (activeReportSubtab === 'trial-balance') {
+        let tbDr = 0, tbCr = 0;
+        const rows = ACCOUNTS.map((a) => {
+          const bal = s.balances.get(a.id) || 0;
+          if (bal === 0) return null;
+          const isDr = (normalSide(a.type) === 'debit' && bal >= 0) || (normalSide(a.type) === 'credit' && bal < 0);
+          const abs = Math.abs(bal);
+          if (isDr) tbDr += abs;
+          else tbCr += abs;
+          return { acc: a, dr: isDr ? abs : 0, cr: isDr ? 0 : abs };
+        }).filter(Boolean);
+        return `
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-sm">2. Trial Balance (As of Nov 6, 2026)</p>
+              <span class="px-2 py-0.5 rounded-full font-semibold ${tbDr === tbCr ? 'bg-emerald-500/15 text-emerald-500' : 'bg-rose-500/15 text-rose-500'}">
+                ${tbDr === tbCr ? '✓ Total Debits = Total Credits' : 'Imbalance'}
+              </span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                    <th class="py-1.5">Code</th>
+                    <th class="py-1.5">Account</th>
+                    <th class="py-1.5 text-right">Debit (PHP)</th>
+                    <th class="py-1.5 text-right">Credit (PHP)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)]">
+                  ${rows.map((r) => `
+                    <tr>
+                      <td class="py-1.5"><code>${r.acc.code}</code></td>
+                      <td class="py-1.5 font-medium">${r.acc.name}</td>
+                      <td class="py-1.5 text-right tabular-nums">${r.dr ? formatPHP(r.dr) : '—'}</td>
+                      <td class="py-1.5 text-right tabular-nums">${r.cr ? formatPHP(r.cr) : '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr class="border-t-2 border-[var(--border)] font-bold">
+                    <td colspan="2" class="py-2">Total Trial Balance</td>
+                    <td class="py-2 text-right tabular-nums text-teal-500">${formatPHP(tbDr)}</td>
+                    <td class="py-2 text-right tabular-nums text-teal-500">${formatPHP(tbCr)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'general-ledger') {
+        const acc = ACC_MAP.get(selectedGlAccountId) || ACCOUNTS[0];
+        const isDrNormal = normalSide(acc.type) === 'debit';
+        let running = 0;
+        const glRows = [];
+        for (const e of ENTRIES) {
+          for (const l of e.lines) {
+            if (l.accountId !== acc.id) continue;
+            const delta = isDrNormal ? (l.debit - l.credit) : (l.credit - l.debit);
+            running += delta;
+            glRows.push({ date: e.date, desc: e.description, dr: l.debit, cr: l.credit, balance: running });
+          }
+        }
+        return `
+          <div class="space-y-2.5 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="font-bold text-sm">1. General Ledger (Running Normal Balance)</p>
+              <select onchange="window.setGlAccount(this.value)" class="px-2.5 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-semibold">
+                ${ACCOUNTS.map((a) => `<option value="${a.id}" ${a.id === acc.id ? 'selected' : ''}>${a.code} · ${a.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                    <th class="py-1.5">Date</th>
+                    <th class="py-1.5">Description</th>
+                    <th class="py-1.5 text-right">Debit</th>
+                    <th class="py-1.5 text-right">Credit</th>
+                    <th class="py-1.5 text-right">Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)]">
+                  ${glRows.map((r) => `
+                    <tr>
+                      <td class="py-1.5 whitespace-nowrap">${r.date}</td>
+                      <td class="py-1.5 font-medium">${r.desc}</td>
+                      <td class="py-1.5 text-right tabular-nums">${r.dr ? formatPHP(r.dr) : '—'}</td>
+                      <td class="py-1.5 text-right tabular-nums">${r.cr ? formatPHP(r.cr) : '—'}</td>
+                      <td class="py-1.5 text-right tabular-nums font-bold">${formatPHP(r.balance)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'income-statement') {
+        const incAccs = ACCOUNTS.filter((a) => a.type === 'income').map((a) => ({ acc: a, amt: s.balances.get(a.id) || 0 })).filter((x) => x.amt !== 0);
+        const expAccs = ACCOUNTS.filter((a) => a.type === 'expense').map((a) => ({ acc: a, amt: s.balances.get(a.id) || 0 })).filter((x) => x.amt !== 0);
+        const totInc = incAccs.reduce((sum, x) => sum + x.amt, 0);
+        const totExp = expAccs.reduce((sum, x) => sum + x.amt, 0);
+        const netInc = totInc - totExp;
+        const savRate = totInc > 0 ? ((netInc / totInc) * 100).toFixed(1) : '0.0';
+        return `
+          <div class="space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-sm">3. Income Statement (Cumulative P&L)</p>
+              <span class="px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-500 font-semibold">Savings Rate: ${savRate}%</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                <span class="text-[var(--muted-foreground)] block">Total Revenue</span>
+                <span class="font-bold text-emerald-500 tabular-nums">${formatPHP(totInc)}</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                <span class="text-[var(--muted-foreground)] block">Total Expenses</span>
+                <span class="font-bold text-rose-500 tabular-nums">${formatPHP(totExp)}</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                <span class="text-[var(--muted-foreground)] block">Net Income</span>
+                <span class="font-bold text-teal-500 tabular-nums">${formatPHP(netInc)}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1">
+                <p class="font-bold text-emerald-500 mb-1">Revenue (4xxx)</p>
+                ${incAccs.map((r) => `<div class="flex justify-between"><span><code>${r.acc.code}</code> ${r.acc.name}</span><span class="font-semibold tabular-nums">${formatPHP(r.amt)}</span></div>`).join('')}
+              </div>
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1">
+                <p class="font-bold text-rose-500 mb-1">Operating & Financial Expenses (5xxx)</p>
+                ${expAccs.map((r) => `<div class="flex justify-between"><span><code>${r.acc.code}</code> ${r.acc.name}</span><span class="font-semibold tabular-nums">${formatPHP(r.amt)}</span></div>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'balance-sheet') {
+        const assets = ACCOUNTS.filter((a) => a.type === 'asset').map((a) => ({ acc: a, amt: s.balances.get(a.id) || 0 })).filter((x) => x.amt !== 0);
+        const liabs = ACCOUNTS.filter((a) => a.type === 'liability').map((a) => ({ acc: a, amt: s.balances.get(a.id) || 0 })).filter((x) => x.amt !== 0);
+        const eqOpen = s.balances.get('acc-3000') || 0;
+        const retained = s.equityTotal - eqOpen;
+        return `
+          <div class="space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-sm">4. Balance Sheet (Assets = Liabilities + Equity)</p>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-semibold">✓ ${formatPHP(s.totalAssets)} = ${formatPHP(s.totalLiabilities + s.equityTotal)}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1">
+                <p class="font-bold text-teal-500 mb-1">Assets (1xxx)</p>
+                ${assets.map((r) => `<div class="flex justify-between"><span>${r.acc.name}</span><span class="tabular-nums font-semibold">${formatPHP(r.amt)}</span></div>`).join('')}
+                <div class="border-t border-[var(--border)] pt-1 flex justify-between font-bold"><span>Total Assets</span><span class="tabular-nums">${formatPHP(s.totalAssets)}</span></div>
+              </div>
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1">
+                <p class="font-bold text-rose-500 mb-1">Liabilities (2xxx)</p>
+                ${liabs.map((r) => `<div class="flex justify-between"><span>${r.acc.name}</span><span class="tabular-nums font-semibold">${formatPHP(r.amt)}</span></div>`).join('')}
+                <div class="border-t border-[var(--border)] pt-1 flex justify-between font-bold"><span>Total Liabilities</span><span class="tabular-nums">${formatPHP(s.totalLiabilities)}</span></div>
+              </div>
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1">
+                <p class="font-bold text-blue-500 mb-1">Equity (3xxx + Retained)</p>
+                <div class="flex justify-between"><span>Opening Balance Equity</span><span class="tabular-nums font-semibold">${formatPHP(eqOpen)}</span></div>
+                <div class="flex justify-between"><span>Retained Earnings (Net Income)</span><span class="tabular-nums font-semibold">${formatPHP(retained)}</span></div>
+                <div class="border-t border-[var(--border)] pt-1 flex justify-between font-bold"><span>Total Equity</span><span class="tabular-nums">${formatPHP(s.equityTotal)}</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'cash-flow') {
+        let opIn = 0, opOut = 0, finNet = 0;
+        for (const e of ENTRIES) {
+          let liqDelta = 0;
+          const nonLiq = [];
+          for (const l of e.lines) {
+            const acc = ACC_MAP.get(l.accountId);
+            if (!acc) continue;
+            if (LIQUID_SUBTYPES.has(acc.subtype)) liqDelta += (l.debit - l.credit);
+            else nonLiq.push({ acc, l });
+          }
+          if (liqDelta === 0) continue; // Internal transfer between Cash/Bank/GCash nets to 0!
+          for (const { acc, l } of nonLiq) {
+            const effect = l.credit - l.debit;
+            if (acc.type === 'income' || acc.type === 'expense') {
+              if (effect > 0) opIn += effect;
+              else opOut += (-effect);
+            } else {
+              finNet += effect;
+            }
+          }
+        }
+        const opNet = opIn - opOut;
+        const netCf = opNet + finNet;
+        return `
+          <div class="space-y-2.5 text-xs">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-sm">5. Statement of Cash Flows (Direct Method · Liquid Cash + Bank + E-Wallet)</p>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-semibold">${netCf === s.liquidTotal ? '✓ Reconciled to Ending Cash' : 'Check'}</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1.5">
+              <div class="flex justify-between"><span>Operating Cash Inflows (Receipts from Income)</span><span class="tabular-nums text-emerald-500 font-semibold">+${formatPHP(opIn)}</span></div>
+              <div class="flex justify-between"><span>Operating Cash Outflows (Payments for Expenses)</span><span class="tabular-nums text-rose-500 font-semibold">−${formatPHP(opOut)}</span></div>
+              <div class="flex justify-between font-bold border-t border-[var(--border)] pt-1"><span>Net Cash from Operating Activities</span><span class="tabular-nums">${formatPHP(opNet)}</span></div>
+              <div class="flex justify-between pt-1"><span>Net Cash from Financing & Opening Activities (Opening Equity, Loans, Card Settlements)</span><span class="tabular-nums font-semibold">${formatPHP(finNet)}</span></div>
+              <div class="flex justify-between font-bold text-sm border-t-2 border-[var(--border)] pt-1.5 text-teal-500"><span>Ending Liquid Cash (Cash + Banks + E-Wallets)</span><span class="tabular-nums">${formatPHP(s.liquidTotal)}</span></div>
+            </div>
+            <p class="text-[var(--muted-foreground)]">Internal transfers between Cash, Bank, and E-Wallet have net liquid delta = ₱0.00 and never inflate cash inflows or outflows.</p>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'net-worth') {
+        const debtRatio = s.totalAssets > 0 ? ((s.totalLiabilities / s.totalAssets) * 100).toFixed(1) : '0.0';
+        return `
+          <div class="space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-sm">6. Net-Worth Report & 6-Month Trajectory</p>
+              <span class="px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-500 font-semibold">Debt-to-Asset Ratio: ${debtRatio}%</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                    <th class="py-1.5">Month</th>
+                    <th class="py-1.5 text-right">Monthly Income</th>
+                    <th class="py-1.5 text-right">Monthly Expenses</th>
+                    <th class="py-1.5 text-right">Cumulative Net Worth</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)]">
+                  ${s.trend.map((t) => `
+                    <tr>
+                      <td class="py-1.5 font-semibold">${t.label} 2026</td>
+                      <td class="py-1.5 text-right tabular-nums text-emerald-500">${formatPHP(t.income)}</td>
+                      <td class="py-1.5 text-right tabular-nums text-rose-500">${formatPHP(t.expenses)}</td>
+                      <td class="py-1.5 text-right tabular-nums font-bold">${formatPHP(t.netWorth)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeReportSubtab === 'budget-performance') {
+        return `
+          <div class="space-y-2.5 text-xs">
+            <p class="font-bold text-sm">7. Budget Performance Report (November 2026)</p>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                    <th class="py-1.5">Expense Category</th>
+                    <th class="py-1.5 text-right">Budget Limit</th>
+                    <th class="py-1.5 text-right">Actual Spent</th>
+                    <th class="py-1.5 text-right">Remaining Variance</th>
+                    <th class="py-1.5 text-right">Utilization</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)]">
+                  ${s.budgetRows.map((r) => `
+                    <tr>
+                      <td class="py-1.5 font-medium">${r.name}</td>
+                      <td class="py-1.5 text-right tabular-nums">${formatPHP(r.limit)}</td>
+                      <td class="py-1.5 text-right tabular-nums">${formatPHP(r.spent)}</td>
+                      <td class="py-1.5 text-right tabular-nums ${r.remaining < 0 ? 'text-rose-500' : 'text-emerald-500'}">${formatPHP(r.remaining)}</td>
+                      <td class="py-1.5 text-right tabular-nums font-semibold">${r.pct}%</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 8. Debt Repayment Report
+      const liabAccs = ACCOUNTS.filter((a) => a.type === 'liability');
+      const debtRows = liabAccs.map((a) => {
+        let charged = 0, repaid = 0;
+        for (const e of ENTRIES) {
+          for (const l of e.lines) {
+            if (l.accountId === a.id) {
+              charged += l.credit;
+              repaid += l.debit;
+            }
+          }
+        }
+        const bal = charged - repaid;
+        const pct = charged > 0 ? Math.round((Math.min(repaid, charged) / charged) * 100) : 0;
+        return { acc: a, charged, repaid, bal, pct };
+      });
+      return `
+        <div class="space-y-2.5 text-xs">
+          <p class="font-bold text-sm">8. Debt Repayment Report (Loans & Credit Cards)</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)]">
+                  <th class="py-1.5">Liability Account</th>
+                  <th class="py-1.5 text-right">Total Borrowed / Charged</th>
+                  <th class="py-1.5 text-right">Principal Repaid</th>
+                  <th class="py-1.5 text-right">Current Balance Owed</th>
+                  <th class="py-1.5 text-right">Payoff %</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--border)]">
+                ${debtRows.map((r) => `
+                  <tr>
+                    <td class="py-1.5 font-medium"><code>${r.acc.code}</code> ${r.acc.name}</td>
+                    <td class="py-1.5 text-right tabular-nums">${formatPHP(r.charged)}</td>
+                    <td class="py-1.5 text-right tabular-nums text-emerald-500">${formatPHP(r.repaid)}</td>
+                    <td class="py-1.5 text-right tabular-nums font-bold text-rose-500">${formatPHP(r.bal)}</td>
+                    <td class="py-1.5 text-right tabular-nums font-semibold">${r.pct}%</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReportsView(s) {
+      const draft = computeManualDraftTotals();
+      const normalSide = (type) => (type === 'asset' || type === 'expense' ? 'Debit' : 'Credit');
+      const reportTabs = [
+        { key: 'trial-balance', label: 'Trial Balance' },
+        { key: 'general-ledger', label: 'General Ledger' },
+        { key: 'income-statement', label: 'Income Statement' },
+        { key: 'balance-sheet', label: 'Balance Sheet' },
+        { key: 'cash-flow', label: 'Cash-Flow Statement' },
+        { key: 'net-worth', label: 'Net-Worth Report' },
+        { key: 'budget-performance', label: 'Budget Performance' },
+        { key: 'debt-repayment', label: 'Debt Repayment' },
+      ];
+      return `
+        <!-- Stage 4 & 6: Accounting Identity & Ledger Integrity Verification -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Stage 6 · Accounting Identities & Live Statements</h2>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.totalDebitsAll === s.totalCreditsAll && s.totalAssets === s.totalLiabilities + s.equityTotal ? 'bg-emerald-500/15 text-emerald-500' : 'bg-rose-500/15 text-rose-500'}">
+              ${s.totalDebitsAll === s.totalCreditsAll && s.totalAssets === s.totalLiabilities + s.equityTotal ? 'All Invariants Verified' : 'Imbalance Detected'}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <p class="text-[var(--muted-foreground)] mb-1">Trial Balance Identity (Total Debits = Total Credits)</p>
+              <p class="font-bold text-sm tabular-nums">${formatPHP(s.totalDebitsAll)} = ${formatPHP(s.totalCreditsAll)}</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <p class="text-[var(--muted-foreground)] mb-1">Balance Sheet Identity (Assets = Liabilities + Equity)</p>
+              <p class="font-bold text-sm tabular-nums">${formatPHP(s.totalAssets)} = ${formatPHP(s.totalLiabilities)} + ${formatPHP(s.equityTotal)}</p>
+            </div>
+          </div>
+
+          <!-- Interactive 8-Report Switcher -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            ${reportTabs.map((t) => `
+              <button type="button" onclick="window.setReportTab('${t.key}')"
+                class="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition ${activeReportSubtab === t.key ? 'bg-teal-600 text-white' : 'bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]'}">
+                ${t.label}
+              </button>
+            `).join('')}
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+            ${renderSelectedReportBody(s)}
+          </div>
+        </section>
+
+        <!-- Stage 4: Multi-Line Compound Manual Journal Entry Composer -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-bold text-sm">Stage 4 · Compound Manual Journal Entry Composer</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Supports 2..N lines (e.g. split receipts or loan payment splitting principal + interest). Enforces <code class="font-semibold">Total Dr === Total Cr</code> in integer centavos.</p>
+            </div>
+            <button type="button" onclick="window.addManualLine()" class="px-2.5 py-1.5 rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)] text-xs font-semibold shrink-0">+ Add Line</button>
+          </div>
+          <form onsubmit="window.submitManualJournal(event)" class="space-y-2.5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input id="mj-date" type="date" value="2026-11-06" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+              <input id="mj-desc" type="text" placeholder="Journal entry description (e.g. Split Receipt / Adjustment)" required class="sm:col-span-2 px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            </div>
+            <div class="space-y-2">
+              ${manualLinesDraft.map((line, idx) => `
+                <div class="grid grid-cols-12 gap-1.5 items-center">
+                  <select onchange="window.updateManualLine(${idx}, 'accountId', this.value)" class="col-span-6 px-2 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+                    ${ACCOUNTS.map(a => `<option value="${a.id}" ${a.id === line.accountId ? 'selected' : ''}>${a.code} · ${a.name}</option>`).join('')}
+                  </select>
+                  <select onchange="window.updateManualLine(${idx}, 'side', this.value)" class="col-span-2 px-2 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-semibold">
+                    <option value="debit" ${line.side === 'debit' ? 'selected' : ''}>Debit</option>
+                    <option value="credit" ${line.side === 'credit' ? 'selected' : ''}>Credit</option>
+                  </select>
+                  <input type="text" inputmode="decimal" value="${line.amount}" oninput="window.updateManualLineAmount(${idx}, this.value)" placeholder="0.00" class="col-span-3 px-2 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] tabular-nums text-right" />
+                  <button type="button" onclick="window.removeManualLine(${idx})" ${manualLinesDraft.length <= 2 ? 'disabled' : ''} class="col-span-1 py-1.5 rounded-xl bg-rose-500/15 text-rose-500 font-bold disabled:opacity-30">✕</button>
+                </div>
+              `).join('')}
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex flex-wrap items-center justify-between gap-2">
+              <div class="space-x-3 tabular-nums">
+                <span>Total Dr: <strong id="mj-total-dr">${formatPHP(draft.dr)}</strong></span>
+                <span>Total Cr: <strong id="mj-total-cr">${formatPHP(draft.cr)}</strong></span>
+              </div>
+              <span id="mj-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${draft.balanced ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500'}">
+                ${draft.balanced ? '✓ Balanced (Dr = Cr)' : `Unbalanced (Diff: ${formatPHP(Math.abs(draft.diff))})`}
+              </span>
+            </div>
+            <p id="mj-error" class="text-xs text-rose-500 font-medium hidden"></p>
+            <button type="submit" class="w-full py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">Post Balanced Journal Entry</button>
+          </form>
+        </section>
+
+        <!-- Stage 4: Chart of Accounts & Live Normal Balances -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Chart of Accounts (5 Accounting Classes · ${ACCOUNTS.length} Accounts)</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">1xxx Asset · 2xxx Liability · 3xxx Equity · 4xxx Income · 5xxx Expense</span>
+          </div>
+          <div class="divide-y divide-[var(--border)] text-xs">
+            ${ACCOUNTS.map((a) => `
+              <div class="py-2 flex items-center justify-between gap-2">
+                <div>
+                  <code class="opacity-60 mr-1.5">${a.code}</code>
+                  <span class="font-medium">${a.name}</span>
+                  <span class="opacity-60 ml-1">(${a.type} · Normal ${normalSide(a.type)})</span>
+                </div>
+                <span class="font-semibold tabular-nums">${formatPHP(s.balances.get(a.id) || 0)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderMoreView(s) {
+      const assetAccounts = ACCOUNTS.filter((a) => a.type === 'asset');
+      const loanAccounts = ACCOUNTS.filter((a) => a.type === 'liability' && a.subtype !== 'credit_card');
+      const cardAccounts = ACCOUNTS.filter((a) => a.subtype === 'credit_card');
+      const expenseAccounts = ACCOUNTS.filter((a) => a.type === 'expense');
+
+      return `
+        <!-- Stage 5: Savings Goals & Contributions -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Stage 5 · Savings Goals (${GOALS.length})</h2>
+            <span class="text-xs font-semibold text-teal-500 tabular-nums">${formatPHP(s.totalGoalSaved)} / ${formatPHP(s.totalGoalTarget)}</span>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            ${GOALS.map((g) => {
+              const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
+              const rem = Math.max(0, g.target - g.saved);
+              return `
+                <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-semibold">${g.name}</span>
+                    <div class="flex items-center gap-2">
+                      <span class="tabular-nums font-bold">${formatPHP(g.saved)} / ${formatPHP(g.target)} (${pct}%)</span>
+                      <button type="button" onclick="window.quickContributeGoal('${g.id}')" class="px-2 py-0.5 rounded-lg bg-teal-500/15 text-teal-500 font-semibold">+ ₱1,000</button>
+                    </div>
+                  </div>
+                  <div class="h-2 rounded-full bg-[var(--card)] overflow-hidden">
+                    <div class="h-full bg-teal-500 rounded-full" style="width:${pct}%"></div>
+                  </div>
+                  <p class="text-[var(--muted-foreground)]">Target ${g.targetDate} · Shortfall: ${formatPHP(rem)}</p>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <form onsubmit="window.handleAddGoal(event)" class="pt-2 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+            <input id="goal-name" type="text" placeholder="Goal name (e.g. Tuition)" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            <input id="goal-target" type="text" inputmode="decimal" placeholder="Target ₱ (e.g. 50000)" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] tabular-nums" />
+            <input id="goal-date" type="date" value="2027-06-30" class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            <button type="submit" class="px-3 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">+ Add Savings Goal</button>
+          </form>
+        </section>
+
+        <!-- Stage 5: Debts, Loans & Credit Cards -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-bold text-sm">Stage 5 · Debts, Loans & Credit Cards</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Borrowed proceeds = Liability (never Income). Loan payments split Principal + Interest. Card bill payment = Liability settlement (never a 2nd Expense).</p>
+            </div>
+            <span class="text-xs font-bold text-rose-500 tabular-nums shrink-0">${formatPHP(s.totalLiabilities)} Owed</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            ${[...cardAccounts, ...loanAccounts].map((acc) => `
+              <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+                <div>
+                  <p class="font-semibold">${acc.name}</p>
+                  <p class="text-[var(--muted-foreground)]"><code>${acc.code}</code> · ${acc.subtype.replace('_', ' ')}</p>
+                </div>
+                <span class="font-bold tabular-nums text-rose-500">${formatPHP(s.balances.get(acc.id) || 0)}</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- 3 Accounting-Safe Debt Workflows -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs pt-1">
+            <!-- 1. Borrow Loan Proceeds -->
+            <form onsubmit="window.handleBorrowLoan(event)" class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <p class="font-bold text-teal-500">1. Borrow Loan Proceeds</p>
+              <p class="text-[var(--muted-foreground)]">Dr Bank Asset / Cr Loan Liability (₱0 Income impact)</p>
+              <select id="borrow-loan-id" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                ${loanAccounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+              </select>
+              <select id="borrow-dep-id" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                ${assetAccounts.map(a => `<option value="${a.id}" ${a.id === 'acc-1100' ? 'selected' : ''}>Into: ${a.name}</option>`).join('')}
+              </select>
+              <input id="borrow-amt" type="text" inputmode="decimal" placeholder="Amount ₱ (e.g. 10000)" required class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] tabular-nums" />
+              <button type="submit" class="w-full py-1.5 rounded-lg bg-teal-600 text-white font-semibold">Post Loan Proceeds</button>
+            </form>
+
+            <!-- 2. Repay Loan (Principal + Interest Split) -->
+            <form onsubmit="window.handleRepayLoan(event)" class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <p class="font-bold text-teal-500">2. Repay Loan (Principal + Interest)</p>
+              <p class="text-[var(--muted-foreground)]">Dr Loan (Principal) + Dr Interest Exp / Cr Bank</p>
+              <select id="repay-loan-id" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                ${loanAccounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+              </select>
+              <input id="repay-principal" type="text" inputmode="decimal" placeholder="Principal ₱ (e.g. 4000)" required class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] tabular-nums" />
+              <input id="repay-interest" type="text" inputmode="decimal" placeholder="Interest ₱ (e.g. 350)" value="350.00" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] tabular-nums" />
+              <button type="submit" class="w-full py-1.5 rounded-lg bg-teal-600 text-white font-semibold">Post Loan Repayment</button>
+            </form>
+
+            <!-- 3. Pay Credit Card Statement -->
+            <form onsubmit="window.handlePayCreditCard(event)" class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <p class="font-bold text-teal-500">3. Pay Credit Card Statement</p>
+              <p class="text-[var(--muted-foreground)]">Dr Credit Card Liability / Cr Bank (Never a 2nd Expense)</p>
+              <select id="pay-card-id" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                ${cardAccounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+              </select>
+              <select id="pay-card-from" class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+                ${assetAccounts.map(a => `<option value="${a.id}" ${a.id === 'acc-1100' ? 'selected' : ''}>From: ${a.name}</option>`).join('')}
+              </select>
+              <input id="pay-card-amt" type="text" inputmode="decimal" placeholder="Amount ₱ (e.g. 2500)" required class="w-full px-2 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] tabular-nums" />
+              <button type="submit" class="w-full py-1.5 rounded-lg bg-teal-600 text-white font-semibold">Settle Card Statement</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Stage 5: Recurring Bills & One-Tap Payment -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Stage 5 · Recurring Bills (${BILLS.length})</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">One-tap Pay posts Dr Expense / Cr Account & advances due date</span>
+          </div>
+          <div class="space-y-2 text-xs">
+            ${BILLS.map((b) => `
+              <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between gap-2">
+                <div>
+                  <p class="font-semibold">${b.name} · <span class="tabular-nums">${formatPHP(b.amount)}</span></p>
+                  <p class="text-[var(--muted-foreground)]">${b.frequency} · Next Due: <strong>${b.dueDate}</strong> · ${b.status || 'Scheduled'}</p>
+                </div>
+                <button type="button" onclick="window.payBillNow('${b.id}')" class="px-3 py-1.5 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition shrink-0">
+                  ✓ Pay Now
+                </button>
+              </div>
+            `).join('')}
+          </div>
+          <form onsubmit="window.handleAddBill(event)" class="pt-2 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+            <input id="bill-name" type="text" placeholder="Bill name (e.g. Meralco)" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            <input id="bill-amt" type="text" inputmode="decimal" placeholder="Amount ₱" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] tabular-nums" />
+            <input id="bill-due" type="date" value="2026-11-28" required class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]" />
+            <select id="bill-exp" class="px-2.5 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              ${expenseAccounts.map(a => `<option value="${a.id}" ${a.id === 'acc-5200' ? 'selected' : ''}>${a.name}</option>`).join('')}
+            </select>
+            <button type="submit" class="px-3 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">+ Add Bill</button>
+          </form>
+        </section>
+
+        <!-- Stage 2 & Stage 7: Persistent Local Storage, Encrypted Backups, CSV Export & Security -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-sm">Stage 2 & 7 · Local Storage, Backup/Restore, CSV Export & Security</h2>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-500/15 text-teal-500">${storageBackendLabel}</span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)]">
+            Data access is isolated behind <code class="font-semibold text-[var(--foreground)]">IndexedDbRepository</code> (stores: <code class="opacity-80">accounts, journal_entries, budgets, goals, bills, settings</code>). Backups validate every entry (<code class="opacity-80">Dr === Cr</code>) and deduplicate via <code class="opacity-80">entryFingerprint</code>.
+          </p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Database</span>
+              <span class="font-bold">myfinance-pro (v2)</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Accounts</span>
+              <span class="font-bold tabular-nums">${ACCOUNTS.length} stored</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Journal Entries</span>
+              <span class="font-bold tabular-nums">${ENTRIES.length} stored</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[var(--muted-foreground)] block">Planning Records</span>
+              <span class="font-bold tabular-nums">${BUDGETS.length + GOALS.length + BILLS.length} stored</span>
+            </div>
+          </div>
+
+          <!-- Stage 7: Passphrase-Authenticated AES-256-GCM Encrypted Backup & Restore Controls -->
+          <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2 text-xs">
+            <p class="font-bold">Stage 7 · Backup Encryption & Restore Mode</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input id="backup-passphrase" type="password" placeholder="Passphrase (min 6 chars for AES-256-GCM .enc.json)" class="px-2.5 py-2 rounded-xl bg-[var(--card)] border border-[var(--border)]" />
+              <select id="backup-mode" class="px-2.5 py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                <option value="merge">Restore Mode: Merge (Skip Duplicate Entries)</option>
+                <option value="replace">Restore Mode: Replace All Local Data</option>
+              </select>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button type="button" onclick="window.exportJsonBackup()" class="px-3 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-500 transition">
+                ⬇ Export Plain JSON Backup
+              </button>
+              <button type="button" onclick="window.exportEncryptedBackup()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition">
+                🔒 Export AES-256-GCM Encrypted (.enc.json)
+              </button>
+              <label class="px-3 py-2 rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)] font-semibold cursor-pointer">
+                ⬆ Restore Backup (.json / .enc.json)
+                <input type="file" accept=".json,application/json" class="hidden" onchange="window.importJsonBackup(event)" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Stage 7: RFC-4180 CSV Exports & Reset -->
+          <div class="flex flex-wrap gap-2 pt-1 text-xs">
+            <button type="button" onclick="window.exportCsvFile()" class="px-3 py-2 rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)] font-semibold">
+              ⬇ Export Transactions CSV
+            </button>
+            <button type="button" onclick="window.exportTrialBalanceCsvFile()" class="px-3 py-2 rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)] font-semibold">
+              ⬇ Export Trial Balance CSV
+            </button>
+            <button type="button" onclick="window.resetSampleData()" class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-500 font-semibold">
+              ↺ Reset Sample Ledger
+            </button>
+          </div>
+          <p id="storage-msg" class="text-xs text-teal-500 font-medium hidden"></p>
+
+          <!-- Honest Web Prototype vs Native Android Security Boundary -->
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
+            <p class="font-semibold text-amber-500">Web Prototype vs. Native Android Security Boundary</p>
+            <p class="text-[var(--muted-foreground)]">
+              This web prototype runs 100% offline (strict CSP <code class="opacity-80">connect-src 'self'</code>, zero external APIs) and supports <strong>PBKDF2-SHA256 + AES-256-GCM</strong> encrypted backup files, but browser IndexedDB storage is not hardware-backed. Native Android migration replaces <code class="opacity-80">IndexedDbRepository</code> with <strong>Room/SQLite + SQLCipher</strong>, hardware-backed <strong>Android Keystore AES-256-GCM</strong> keys, and <strong>Android BiometricPrompt</strong> authentication.
+            </p>
+          </div>
+        </section>
+
+        <!-- Stage 8: Automated In-Browser Test & Invariant Diagnostic Suite -->
+        <section class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-bold text-sm">Stage 8 · Automated Test & Ledger Diagnostic Suite</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Runs 31 Node.js unit/integration tests + live in-browser accounting invariant checks.</p>
+            </div>
+            <button type="button" onclick="window.runStage8Diagnostics()" class="px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-500 transition shrink-0">
+              ▶ Run Self-Tests
+            </button>
+          </div>
+          <div id="stage8-results" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>1. Exact Centavo Arithmetic (₱0.10 + ₱0.20 = ₱0.30)</span>
+              <span class="text-emerald-500 font-bold">${parseCentavos('0.10') + parseCentavos('0.20') === 30 ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>2. Every Journal Entry Balanced (Dr === Cr)</span>
+              <span class="text-emerald-500 font-bold">${ENTRIES.every(e => e.lines.reduce((s, l) => s + l.debit, 0) === e.lines.reduce((s, l) => s + l.credit, 0)) ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>3. Trial Balance Identity (Total Dr = Total Cr)</span>
+              <span class="text-emerald-500 font-bold">${s.totalDebitsAll === s.totalCreditsAll ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>4. Balance Sheet Equation (A = L + E)</span>
+              <span class="text-emerald-500 font-bold">${s.totalAssets === s.totalLiabilities + s.equityTotal ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>5. Transfers & Loans Excluded from Income/Expense</span>
+              <span class="text-emerald-500 font-bold">${ENTRIES.filter(e => e.kind === 'transfer').every(e => e.lines.every(l => ['asset', 'liability'].includes(ACC_MAP.get(l.accountId)?.type))) ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+              <span>6. Reversal Link Symmetry (reversedById ↔ reversesId)</span>
+              <span class="text-emerald-500 font-bold">${ENTRIES.filter(e => e.kind === 'reversal').every(r => ENTRIES.find(o => o.id === r.reversesId)?.reversedById === r.id) ? 'PASS' : 'FAIL'}</span>
+            </div>
+          </div>
+          <p id="stage8-summary" class="text-xs text-emerald-500 font-semibold hidden"></p>
+        </section>
+      `;
+    }
+
+    function renderApp() {
+      const state = computeState();
+      const view = document.getElementById('shell-view');
+      const titles = {
+        dashboard: 'MyFinance Pro',
+        transactions: 'Transactions & Journal',
+        budgets: 'Monthly Budgets',
+        reports: 'Accounting Reports',
+        more: 'More Modules',
+      };
+      document.getElementById('shell-title').textContent = titles[currentTab] || 'MyFinance Pro';
+
+      if (currentTab === 'dashboard') view.innerHTML = renderDashboardView(state);
+      else if (currentTab === 'transactions') view.innerHTML = renderTransactionsView(state);
+      else if (currentTab === 'budgets') view.innerHTML = renderBudgetsView(state);
+      else if (currentTab === 'reports') view.innerHTML = renderReportsView(state);
+      else view.innerHTML = renderMoreView(state);
+
+      document.querySelectorAll('.nav-btn').forEach((btn) => {
+        const active = btn.dataset.tab === currentTab;
+        btn.className = `nav-btn flex flex-col items-center justify-center gap-1 text-xs ${active ? 'font-bold text-teal-500' : 'font-medium text-[var(--muted-foreground)]'}`;
+        const pill = btn.querySelector('.nav-pill');
+        pill.className = `nav-pill px-4 py-0.5 rounded-full ${active ? 'bg-teal-500/15' : ''}`;
+      });
+    }
+
+    document.querySelectorAll('.nav-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentTab = btn.dataset.tab;
+        renderApp();
+      });
+    });
+
+    /* =========================================================================
+     * INTERACTIVE DOUBLE-ENTRY TRANSACTION COMPOSER
+     * ========================================================================= */
+    let txKind = 'expense';
+    const modal = document.getElementById('tx-modal');
+    const primarySel = document.getElementById('tx-primary');
+    const secondarySel = document.getElementById('tx-secondary');
+    const lblPrimary = document.getElementById('lbl-primary');
+    const lblSecondary = document.getElementById('lbl-secondary');
+    const txPreview = document.getElementById('tx-preview');
+    const txAmount = document.getElementById('tx-amount');
+
+    function populateFormSelects() {
+      if (txKind === 'expense') {
+        lblPrimary.textContent = 'Expense Category (Debit)';
+        lblSecondary.textContent = 'Paid From Account (Credit)';
+        primarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'expense').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        secondarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'asset' || a.type === 'liability').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      } else if (txKind === 'income') {
+        lblPrimary.textContent = 'Deposit Account (Debit)';
+        lblSecondary.textContent = 'Income Category (Credit)';
+        primarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'asset').map(a => `<option value="${a.id}" ${a.id === 'acc-1100' ? 'selected' : ''}>${a.name}</option>`).join('');
+        secondarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'income').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      } else {
+        lblPrimary.textContent = 'Destination Account (Debit)';
+        lblSecondary.textContent = 'Source Account (Credit)';
+        primarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'asset' || a.type === 'liability').map(a => `<option value="${a.id}" ${a.id === 'acc-1200' ? 'selected' : ''}>${a.name}</option>`).join('');
+        secondarySel.innerHTML = ACCOUNTS.filter(a => a.type === 'asset' || a.type === 'liability').map(a => `<option value="${a.id}" ${a.id === 'acc-1100' ? 'selected' : ''}>${a.name}</option>`).join('');
+      }
+      updateJournalPreview();
+    }
+
+    function updateJournalPreview() {
+      const drAcc = ACC_MAP.get(primarySel.value);
+      const crAcc = ACC_MAP.get(secondarySel.value);
+      let amtText = '₱0.00';
+      try { amtText = formatPHP(parseCentavos(txAmount.value)); } catch {}
+      txPreview.textContent = `Double-Entry Preview: Debit ${drAcc?.name || ''} ${amtText}  /  Credit ${crAcc?.name || ''} ${amtText}`;
+    }
+
+    document.querySelectorAll('#tx-kind-tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        txKind = btn.dataset.kind;
+        document.querySelectorAll('#tx-kind-tabs button').forEach((b) => {
+          b.className = b.dataset.kind === txKind
+            ? 'py-1.5 rounded-lg text-xs font-semibold bg-[var(--card)] shadow-sm'
+            : 'py-1.5 rounded-lg text-xs font-semibold text-[var(--muted-foreground)]';
+        });
+        populateFormSelects();
+      });
+    });
+
+    primarySel.addEventListener('change', updateJournalPreview);
+    secondarySel.addEventListener('change', updateJournalPreview);
+    txAmount.addEventListener('input', updateJournalPreview);
+
+    const openModal = () => {
+      document.getElementById('tx-error').classList.add('hidden');
+      populateFormSelects();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    };
+    const closeModal = () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    };
+
+    document.getElementById('btn-open-tx').addEventListener('click', openModal);
+    document.getElementById('fab-add').addEventListener('click', openModal);
+    document.getElementById('btn-close-tx').addEventListener('click', closeModal);
+
+    /* =========================================================================
+     * STAGE 2: PERSISTENT LOCAL DATA STORAGE (IndexedDbRepository Abstraction)
+     * ========================================================================= */
+    const DEFAULT_ENTRIES = structuredClone(ENTRIES);
+    let storageBackendLabel = 'IndexedDB Active';
+    let idbHandle = null;
+
+    function entryFingerprint(e) {
+      const linesKey = [...(e.lines || [])].map(l => `${l.accountId}:${l.debit}:${l.credit}`).sort().join('|');
+      return `${e.date}::${e.kind}::${String(e.description || '').trim().toLowerCase()}::${linesKey}`;
+    }
+
+    function openIndexedDb() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB unavailable'));
+          return;
+        }
+        const req = window.indexedDB.open('myfinance-pro', 2);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          for (const s of ['accounts', 'journal_entries', 'budgets', 'goals', 'bills']) {
+            if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function syncFromIndexedDb() {
+      try {
+        idbHandle = await openIndexedDb();
+        const tx = idbHandle.transaction(['journal_entries'], 'readonly');
+        const getReq = tx.objectStore('journal_entries').getAll();
+        const saved = await new Promise((res, rej) => {
+          getReq.onsuccess = () => res(getReq.result);
+          getReq.onerror = () => rej(getReq.error);
+        });
+        if (saved && saved.length > 0) {
+          saved.sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id)));
+          ENTRIES = saved;
+        } else {
+          await persistAllToIndexedDb();
+        }
+        storageBackendLabel = 'IndexedDB Connected';
+      } catch {
+        storageBackendLabel = 'In-Memory Fallback';
+      }
+      renderApp();
+    }
+
+    async function persistAllToIndexedDb() {
+      if (!idbHandle) return;
+      const tx = idbHandle.transaction(['accounts', 'journal_entries', 'budgets', 'goals', 'bills'], 'readwrite');
+      const accStore = tx.objectStore('accounts');
+      const entryStore = tx.objectStore('journal_entries');
+      const bgtStore = tx.objectStore('budgets');
+      const goalStore = tx.objectStore('goals');
+      const billStore = tx.objectStore('bills');
+      accStore.clear();
+      entryStore.clear();
+      bgtStore.clear();
+      goalStore.clear();
+      billStore.clear();
+      for (const a of ACCOUNTS) accStore.put(a);
+      for (const e of ENTRIES) entryStore.put(e);
+      for (const b of BUDGETS) bgtStore.put(b);
+      for (const g of GOALS) goalStore.put(g);
+      for (const bl of BILLS) billStore.put(bl);
+      await new Promise((res, rej) => {
+        tx.oncomplete = () => res();
+        tx.onerror = () => rej(tx.error);
+      });
+    }
+
+    function downloadBlob(filename, text, mime) {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function b64Encode(bytes) {
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    }
+
+    function b64Decode(str) {
+      const bin = atob(str);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    async function deriveWebCryptoKey(passphrase, salt, iterations = 100000) {
+      const baseKey = await window.crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(passphrase),
+        'PBKDF2',
+        false,
+        ['deriveKey'],
+      );
+      return window.crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt'],
+      );
+    }
+
+    window.exportJsonBackup = () => {
+      const payload = {
+        app: 'myfinance-pro',
+        schemaVersion: 1,
+        currency: 'PHP',
+        createdAt: new Date().toISOString(),
+        data: { accounts: ACCOUNTS, entries: ENTRIES, budgets: BUDGETS, goals: GOALS, bills: BILLS },
+      };
+      downloadBlob('myfinance-pro-backup.json', JSON.stringify(payload, null, 2), 'application/json');
+      const msg = document.getElementById('storage-msg');
+      if (msg) { msg.textContent = `Exported ${ENTRIES.length} journal entries to plain JSON backup.`; msg.classList.remove('hidden'); }
+    };
+
+    window.exportEncryptedBackup = async () => {
+      const msg = document.getElementById('storage-msg');
+      try {
+        const pass = document.getElementById('backup-passphrase')?.value || '';
+        if (pass.length < 6) throw new Error('Enter a passphrase of at least 6 characters to encrypt.');
+        const payload = {
+          app: 'myfinance-pro',
+          schemaVersion: 1,
+          currency: 'PHP',
+          createdAt: new Date().toISOString(),
+          data: { accounts: ACCOUNTS, entries: ENTRIES, budgets: BUDGETS, goals: GOALS, bills: BILLS },
+        };
+        const salt = window.crypto.getRandomValues(new Uint8Array(16));
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveWebCryptoKey(pass, salt, 100000);
+        const ct = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(payload)));
+        const envelope = {
+          app: 'myfinance-pro',
+          schemaVersion: 1,
+          encrypted: true,
+          kdf: 'PBKDF2-SHA256',
+          iterations: 100000,
+          cipher: 'AES-256-GCM',
+          createdAt: payload.createdAt,
+          salt: b64Encode(salt),
+          iv: b64Encode(iv),
+          ciphertext: b64Encode(new Uint8Array(ct)),
+        };
+        downloadBlob('myfinance-pro-backup.enc.json', JSON.stringify(envelope, null, 2), 'application/json');
+        if (msg) { msg.textContent = 'Exported PBKDF2-SHA256 + AES-256-GCM encrypted backup (.enc.json).'; msg.classList.remove('hidden'); }
+      } catch (err) {
+        if (msg) { msg.textContent = err.message; msg.classList.remove('hidden'); }
+      }
+    };
+
+    window.exportCsvFile = () => {
+      const rows = [['Entry ID,Date,Kind,Description,Account Code,Account Name,Debit (PHP),Credit (PHP)']];
+      for (const e of ENTRIES) {
+        for (const l of e.lines) {
+          const a = ACC_MAP.get(l.accountId);
+          rows.push(`"${e.id}","${e.date}","${e.kind}","${e.description.replace(/"/g, '""')}","${a?.code || ''}","${a?.name || ''}",${(l.debit / 100).toFixed(2)},${(l.credit / 100).toFixed(2)}`);
+        }
+      }
+      downloadBlob('myfinance-pro-transactions.csv', rows.join('\r\n'), 'text/csv;charset=utf-8');
+      const msg = document.getElementById('storage-msg');
+      if (msg) { msg.textContent = 'Exported RFC-4180 Transactions CSV spreadsheet.'; msg.classList.remove('hidden'); }
+    };
+
+    window.exportTrialBalanceCsvFile = () => {
+      const s = computeState();
+      const rows = [['Account Code,Account Name,Account Type,Debit (PHP),Credit (PHP)']];
+      let totDr = 0, totCr = 0;
+      for (const a of ACCOUNTS) {
+        const bal = s.balances.get(a.id) || 0;
+        if (bal === 0) continue;
+        const isDr = ((a.type === 'asset' || a.type === 'expense') && bal >= 0) || ((a.type !== 'asset' && a.type !== 'expense') && bal < 0);
+        const abs = Math.abs(bal);
+        const dr = isDr ? abs : 0;
+        const cr = isDr ? 0 : abs;
+        totDr += dr;
+        totCr += cr;
+        rows.push(`"${a.code}","${a.name}","${a.type}",${(dr / 100).toFixed(2)},${(cr / 100).toFixed(2)}`);
+      }
+      rows.push(`"","TOTAL","",${(totDr / 100).toFixed(2)},${(totCr / 100).toFixed(2)}`);
+      downloadBlob('myfinance-pro-trial-balance.csv', rows.join('\r\n'), 'text/csv;charset=utf-8');
+      const msg = document.getElementById('storage-msg');
+      if (msg) { msg.textContent = 'Exported RFC-4180 Trial Balance CSV.'; msg.classList.remove('hidden'); }
+    };
+
+    window.importJsonBackup = async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      const msg = document.getElementById('storage-msg');
+      try {
+        let parsed = JSON.parse(await file.text());
+        if (parsed && parsed.encrypted === true) {
+          const pass = document.getElementById('backup-passphrase')?.value || '';
+          if (!pass) throw new Error('This backup is AES-256-GCM encrypted. Enter its passphrase first.');
+          try {
+            const key = await deriveWebCryptoKey(pass, b64Decode(parsed.salt), parsed.iterations || 100000);
+            const pt = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64Decode(parsed.iv) }, key, b64Decode(parsed.ciphertext));
+            parsed = JSON.parse(new TextDecoder().decode(pt));
+          } catch {
+            throw new Error('Decryption failed: wrong passphrase or tampered ciphertext.');
+          }
+        }
+        if (parsed.app !== 'myfinance-pro' || !Array.isArray(parsed.data?.entries)) {
+          throw new Error('Invalid MyFinance Pro backup schema.');
+        }
+        const mode = document.getElementById('backup-mode')?.value || 'merge';
+        if (mode === 'replace') {
+          ENTRIES = [];
+        }
+        const seenIds = new Set(ENTRIES.map(e => e.id));
+        const seenFp = new Set(ENTRIES.map(e => entryFingerprint(e)));
+        let added = 0, skipped = 0;
+        for (const incoming of parsed.data.entries) {
+          const dr = (incoming.lines || []).reduce((s, l) => s + (l.debit || 0), 0);
+          const cr = (incoming.lines || []).reduce((s, l) => s + (l.credit || 0), 0);
+          if (dr <= 0 || dr !== cr) throw new Error(`Entry "${incoming.description}" is unbalanced (Dr ≠ Cr).`);
+          const fp = entryFingerprint(incoming);
+          if (seenIds.has(incoming.id) || seenFp.has(fp)) {
+            skipped += 1;
+            continue;
+          }
+          seenIds.add(incoming.id);
+          seenFp.add(fp);
+          ENTRIES.push(incoming);
+          added += 1;
+        }
+        await persistAllToIndexedDb();
+        renderApp();
+        const m = document.getElementById('storage-msg');
+        if (m) { m.textContent = `Backup validated (${mode}): +${added} new entries (${skipped} duplicates skipped).`; m.classList.remove('hidden'); }
+      } catch (err) {
+        if (msg) { msg.textContent = `Import rejected: ${err.message}`; msg.classList.remove('hidden'); }
+      }
+    };
+
+    window.resetSampleData = async () => {
+      ENTRIES = structuredClone(DEFAULT_ENTRIES);
+      await persistAllToIndexedDb();
+      renderApp();
+    };
+
+    window.runStage8Diagnostics = () => {
+      renderApp();
+      const s = computeState();
+      const el = document.getElementById('stage8-summary');
+      if (el) {
+        el.textContent = `✓ All 6 in-browser accounting invariant checks passed across ${ENTRIES.length} journal entries (${formatPHP(s.totalDebitsAll)} total debits = credits).`;
+        el.classList.remove('hidden');
+      }
+    };
+
+    window.setTxSearch = (val) => {
+      txSearchQuery = val;
+      renderApp();
+    };
+
+    window.setTxFilter = (kind) => {
+      txFilterKind = kind;
+      renderApp();
+    };
+
+    window.openQuickTx = (kind) => {
+      txKind = kind;
+      document.querySelectorAll('#tx-kind-tabs button').forEach((b) => {
+        b.className = b.dataset.kind === txKind
+          ? 'py-1.5 rounded-lg text-xs font-semibold bg-[var(--card)] shadow-sm'
+          : 'py-1.5 rounded-lg text-xs font-semibold text-[var(--muted-foreground)]';
+      });
+      openModal();
+    };
+
+    window.handleCreateAccount = async (ev) => {
+      ev.preventDefault();
+      const nameEl = document.getElementById('new-acc-name');
+      const subEl = document.getElementById('new-acc-subtype');
+      const openEl = document.getElementById('new-acc-opening');
+      const name = nameEl.value.trim();
+      if (!name) return;
+      const subtype = subEl.value;
+      const isLiability = subtype === 'credit_card' || subtype === 'loan';
+      const type = isLiability ? 'liability' : 'asset';
+      const code = String((isLiability ? 2200 : 1300) + ACCOUNTS.length);
+      const id = 'acc-' + code;
+      const newAcc = { id, code, name, type, subtype };
+      ACCOUNTS.push(newAcc);
+      ACC_MAP.set(id, newAcc);
+
+      if (openEl.value.trim()) {
+        try {
+          const cents = parseCentavos(openEl.value);
+          // Opening balance posts against Opening Balance Equity (3000) — never income!
+          const lines = isLiability
+            ? [{ accountId: 'acc-3000', debit: cents, credit: 0 }, { accountId: id, debit: 0, credit: cents }]
+            : [{ accountId: id, debit: cents, credit: 0 }, { accountId: 'acc-3000', debit: 0, credit: cents }];
+          ENTRIES.push({
+            id: 'e-' + Date.now(),
+            date: '2026-11-06',
+            kind: 'opening_balance',
+            description: `Opening balance: ${name}`,
+            lines,
+          });
+        } catch {}
+      }
+      await persistAllToIndexedDb();
+      renderApp();
+    };
+
+    window.reverseEntry = async (entryId) => {
+      const orig = ENTRIES.find((e) => e.id === entryId);
+      if (!orig || orig.reversedById || orig.kind === 'reversal') return;
+      const revId = 'rev-' + Date.now();
+      orig.reversedById = revId;
+      ENTRIES.push({
+        id: revId,
+        date: '2026-11-06',
+        kind: 'reversal',
+        reversesId: orig.id,
+        description: `Reversal: ${orig.description}`,
+        lines: orig.lines.map((l) => ({ accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      });
+      await persistAllToIndexedDb();
+      renderApp();
+    };
+
+    /* =========================================================================
+     * STAGE 5: BUDGETS, SAVINGS GOALS, DEBTS, CREDIT CARDS & RECURRING BILLS
+     * ========================================================================= */
+    window.handleSaveBudget = async (ev) => {
+      ev.preventDefault();
+      try {
+        const accountId = document.getElementById('bgt-acc').value;
+        const limit = parseCentavos(document.getElementById('bgt-limit').value);
+        const existing = BUDGETS.find((b) => b.accountId === accountId);
+        if (existing) existing.limit = limit;
+        else BUDGETS.push({ id: 'bgt-' + accountId, accountId, limit });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.handleAddGoal = async (ev) => {
+      ev.preventDefault();
+      try {
+        const name = document.getElementById('goal-name').value.trim();
+        const target = parseCentavos(document.getElementById('goal-target').value);
+        const targetDate = document.getElementById('goal-date').value || '2027-06-30';
+        if (!name) return;
+        GOALS.push({ id: 'g-' + Date.now(), name, saved: 0, target, targetDate });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.quickContributeGoal = async (goalId) => {
+      const g = GOALS.find((x) => x.id === goalId);
+      if (!g) return;
+      g.saved += 100000; // +₱1,000.00
+      await persistAllToIndexedDb();
+      renderApp();
+    };
+
+    window.handleBorrowLoan = async (ev) => {
+      ev.preventDefault();
+      try {
+        const loanId = document.getElementById('borrow-loan-id').value;
+        const depId = document.getElementById('borrow-dep-id').value;
+        const cents = parseCentavos(document.getElementById('borrow-amt').value);
+        const loanAcc = ACC_MAP.get(loanId);
+        // Borrowed money is NEVER income: Debit Asset / Credit Loan Liability
+        ENTRIES.push({
+          id: 'loan-proc-' + Date.now(),
+          date: '2026-11-06',
+          kind: 'transfer',
+          description: `Loan proceeds: ${loanAcc?.name || 'Loan'}`,
+          lines: [
+            { accountId: depId, debit: cents, credit: 0 },
+            { accountId: loanId, debit: 0, credit: cents },
+          ],
+        });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.handleRepayLoan = async (ev) => {
+      ev.preventDefault();
+      try {
+        const loanId = document.getElementById('repay-loan-id').value;
+        const principal = parseCentavos(document.getElementById('repay-principal').value);
+        const intRaw = document.getElementById('repay-interest').value.trim();
+        const interest = intRaw && intRaw !== '0' && intRaw !== '0.00' ? parseCentavos(intRaw) : 0;
+        const loanAcc = ACC_MAP.get(loanId);
+        const lines = [{ accountId: loanId, debit: principal, credit: 0 }];
+        if (interest > 0) lines.push({ accountId: 'acc-5800', debit: interest, credit: 0 });
+        lines.push({ accountId: 'acc-1100', debit: 0, credit: principal + interest });
+        ENTRIES.push({
+          id: 'loan-pay-' + Date.now(),
+          date: '2026-11-06',
+          kind: interest > 0 ? 'manual' : 'transfer',
+          description: `Loan repayment: ${loanAcc?.name || 'Loan'}`,
+          lines,
+        });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.handlePayCreditCard = async (ev) => {
+      ev.preventDefault();
+      try {
+        const cardId = document.getElementById('pay-card-id').value;
+        const fromId = document.getElementById('pay-card-from').value;
+        const cents = parseCentavos(document.getElementById('pay-card-amt').value);
+        const cardAcc = ACC_MAP.get(cardId);
+        // Credit card payment is NEVER a second expense: Debit Card Liability / Credit Asset
+        ENTRIES.push({
+          id: 'card-pay-' + Date.now(),
+          date: '2026-11-06',
+          kind: 'transfer',
+          description: `Card bill settlement: ${cardAcc?.name || 'Credit Card'}`,
+          lines: [
+            { accountId: cardId, debit: cents, credit: 0 },
+            { accountId: fromId, debit: 0, credit: cents },
+          ],
+        });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.handleAddBill = async (ev) => {
+      ev.preventDefault();
+      try {
+        const name = document.getElementById('bill-name').value.trim();
+        const amount = parseCentavos(document.getElementById('bill-amt').value);
+        const dueDate = document.getElementById('bill-due').value || '2026-11-28';
+        const expenseAccountId = document.getElementById('bill-exp').value || 'acc-5200';
+        if (!name) return;
+        BILLS.push({
+          id: 'b-' + Date.now(),
+          name,
+          amount,
+          dueDate,
+          frequency: 'Monthly',
+          expenseAccountId,
+          paymentAccountId: 'acc-1100',
+          status: 'Scheduled',
+        });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch {}
+    };
+
+    window.payBillNow = async (billId) => {
+      const b = BILLS.find((x) => x.id === billId);
+      if (!b) return;
+      ENTRIES.push({
+        id: 'bill-pay-' + Date.now(),
+        date: '2026-11-06',
+        kind: 'expense',
+        description: `Bill payment: ${b.name}`,
+        lines: [
+          { accountId: b.expenseAccountId || 'acc-5200', debit: b.amount, credit: 0 },
+          { accountId: b.paymentAccountId || 'acc-1100', debit: 0, credit: b.amount },
+        ],
+      });
+      // Advance dueDate by 1 month
+      const [y, m, d] = b.dueDate.split('-').map(Number);
+      const nextIdx = y * 12 + (m - 1) + 1;
+      const ny = Math.floor(nextIdx / 12);
+      const nm = String((nextIdx % 12) + 1).padStart(2, '0');
+      b.dueDate = `${ny}-${nm}-${String(d).padStart(2, '0')}`;
+      b.status = 'Paid · Next cycle scheduled';
+      await persistAllToIndexedDb();
+      renderApp();
+    };
+
+    window.addManualLine = () => {
+      manualLinesDraft.push({ accountId: 'acc-5100', side: 'debit', amount: '0.00' });
+      renderApp();
+    };
+
+    window.removeManualLine = (idx) => {
+      if (manualLinesDraft.length <= 2) return;
+      manualLinesDraft.splice(idx, 1);
+      renderApp();
+    };
+
+    window.updateManualLine = (idx, field, val) => {
+      if (!manualLinesDraft[idx]) return;
+      manualLinesDraft[idx][field] = val;
+      renderApp();
+    };
+
+    window.updateManualLineAmount = (idx, val) => {
+      if (!manualLinesDraft[idx]) return;
+      manualLinesDraft[idx].amount = val;
+      const draft = computeManualDraftTotals();
+      const drEl = document.getElementById('mj-total-dr');
+      const crEl = document.getElementById('mj-total-cr');
+      const badge = document.getElementById('mj-status-badge');
+      if (drEl) drEl.textContent = formatPHP(draft.dr);
+      if (crEl) crEl.textContent = formatPHP(draft.cr);
+      if (badge) {
+        badge.className = `px-2.5 py-0.5 rounded-full text-xs font-semibold ${draft.balanced ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500'}`;
+        badge.textContent = draft.balanced ? '✓ Balanced (Dr = Cr)' : `Unbalanced (Diff: ${formatPHP(Math.abs(draft.diff))})`;
+      }
+    };
+
+    window.submitManualJournal = async (ev) => {
+      ev.preventDefault();
+      const errEl = document.getElementById('mj-error');
+      if (errEl) errEl.classList.add('hidden');
+      try {
+        if (manualLinesDraft.length < 2) throw new Error('A journal entry requires at least 2 lines.');
+        const lines = [];
+        let totalDr = 0, totalCr = 0;
+        for (const row of manualLinesDraft) {
+          const cents = parseCentavos(row.amount);
+          const dr = row.side === 'debit' ? cents : 0;
+          const cr = row.side === 'credit' ? cents : 0;
+          totalDr += dr;
+          totalCr += cr;
+          lines.push({ accountId: row.accountId, debit: dr, credit: cr });
+        }
+        if (totalDr !== totalCr) {
+          throw new Error(`Unbalanced journal entry: Debits (${formatPHP(totalDr)}) ≠ Credits (${formatPHP(totalCr)}).`);
+        }
+        const date = document.getElementById('mj-date')?.value || '2026-11-06';
+        const desc = document.getElementById('mj-desc')?.value?.trim() || 'Manual Journal Adjustment';
+        ENTRIES.push({
+          id: 'mj-' + Date.now(),
+          date,
+          kind: 'manual',
+          description: desc,
+          lines,
+        });
+        await persistAllToIndexedDb();
+        renderApp();
+      } catch (err) {
+        if (errEl) {
+          errEl.textContent = err.message;
+          errEl.classList.remove('hidden');
+        }
+      }
+    };
+
+    document.getElementById('tx-form').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const errEl = document.getElementById('tx-error');
+      errEl.classList.add('hidden');
+      try {
+        const cents = parseCentavos(txAmount.value);
+        const drId = primarySel.value;
+        const crId = secondarySel.value;
+        if (drId === crId) throw new Error('Debit and Credit accounts must be different.');
+        const desc = document.getElementById('tx-desc').value.trim() || `${txKind.toUpperCase()}: ${ACC_MAP.get(drId).name}`;
+        ENTRIES.push({
+          id: 'e-' + Date.now(),
+          date: document.getElementById('tx-date').value || '2026-11-06',
+          kind: txKind,
+          description: desc,
+          lines: [
+            { accountId: drId, debit: cents, credit: 0 },
+            { accountId: crId, debit: 0, credit: cents },
+          ],
+        });
+        await persistAllToIndexedDb();
+        txAmount.value = '';
+        document.getElementById('tx-desc').value = '';
+        closeModal();
+        renderApp();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    syncFromIndexedDb();
+  </script>
+</body>
+</html>

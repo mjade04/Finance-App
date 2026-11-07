@@ -1,0 +1,70 @@
+/* Design tokens — Material-inspired, premium minimalist palette. */
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius-sm: 10px;
+  --radius: 18px;
+  --radius-lg: 26px;
+  --space: 16px;
+  --nav-h: 72px;
+  --bar-h: 60px;
+  --maxw: 640px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F4F6F8;
+  --surface: #FFFFFF;
+  --surface-2: #EEF1F4;
+  --surface-3: #E3E8ED;
+  --text: #0E1A20;
+  --text-2: #4D5B63;
+  --text-3: #7E8B92;
+  --line: #E1E6EA;
+  --primary: #0F766E;
+  --primary-ink: #FFFFFF;
+  --primary-soft: #D5F0EC;
+  --income: #12805C;
+  --income-soft: #DDF4EA;
+  --expense: #C2364B;
+  --expense-soft: #FBE3E7;
+  --transfer: #2F62D0;
+  --transfer-soft: #E1EAFC;
+  --warn: #A15C07;
+  --warn-soft: #FDF0D9;
+  --c1: #0F766E; --c2: #2F62D0; --c3: #E07A2E; --c4: #8B5CF6; --c5: #D4A20C; --c6: #94A3B8;
+  --hero-1: #0B3B3A;
+  --hero-2: #0F766E;
+  --shadow: 0 1px 2px rgba(14, 26, 32, .05), 0 4px 16px rgba(14, 26, 32, .05);
+  --shadow-lg: 0 12px 40px rgba(14, 26, 32, .18);
+  --scrim: rgba(8, 15, 18, .45);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0B1215;
+  --surface: #131C20;
+  --surface-2: #1A252A;
+  --surface-3: #243238;
+  --text: #E8EEF0;
+  --text-2: #A9B6BC;
+  --text-3: #75848B;
+  --line: #22303A;
+  --primary: #2DD4BF;
+  --primary-ink: #04201D;
+  --primary-soft: #113A36;
+  --income: #4ADE9B;
+  --income-soft: #10301F;
+  --expense: #FB7185;
+  --expense-soft: #3A1820;
+  --transfer: #7AA2FF;
+  --transfer-soft: #18264A;
+  --warn: #FBBF24;
+  --warn-soft: #3A2C0B;
+  --c1: #2DD4BF; --c2: #7AA2FF; --c3: #FB923C; --c4: #A78BFA; --c5: #FACC15; --c6: #64748B;
+  --hero-1: #0E2E2C;
+  --hero-2: #115E57;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
+  --scrim: rgba(0, 0, 0, .6);
+}

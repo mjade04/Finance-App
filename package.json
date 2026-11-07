@@ -1,0 +1,15 @@
+{
+  "name": "myfinance-pro",
+  "version": "0.1.0",
+  "description": "MyFinance Pro — offline-first personal finance & double-entry accounting (web prototype for a future native Android app).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test \"tests/*.test.js\"",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
